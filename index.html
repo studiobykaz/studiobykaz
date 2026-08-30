@@ -171,7 +171,7 @@
 \
 `;
                 
-                text += `📋 --- 帳目Details ---\
+                text += `📋 --- Expense Details ---\
 `;
                 expenses.forEach((exp, i) => {
                     text += `${expenses.length - i}. ${exp.description} - ${formatMoney(exp.amount)} (${exp.payer} paid)\
@@ -181,10 +181,10 @@
                 });
 
                 text += `\
-⚖️ --- 最後Settlement (${homeCurr}) ---\
+⚖️ --- Final Settlement (${homeCurr}) ---\
 `;
                 if (settlementPlan.transactions.length === 0) {
-                    text += `目前無人虧欠，帳已平！\
+                    text += `All settled!\
 `;
                 } else {
                     settlementPlan.transactions.forEach(t => {
