@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Universal Trip Splitter | 東霖專用</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; }
+        input[type="text"], input[type="number"] { -webkit-appearance: none; }
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+        .tab-inactive { color: #6b7280; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const App = () => {
+            // --- 狀態 State ---
+            const [users, setUsers] = useState(['東霖']);
+            const [expenses, setExpenses] = useState([]);
+            
+            // 貨幣設定
+            const [rate, setRate] = useState(0.053);
+            const [foreignCurr, setForeignCurr] = useState('JPY');
+            const [homeCurr, setHomeCurr] = useState('HKD');
+
+            const [activeTab, setActiveTab] = useState('add');
+            
+            // 表單臨時狀態
+            const [amount, setAmount] = useState('');
+            const [description, setDescription] = useState('');
+            const [payer, setPayer] = useState('東霖');
+            const [involved, setInvolved] = useState([]);
+            const [newUserName, setNewUserName] = useState('');
+            
+            // 編輯狀態
+            const [editingId, setEditingId] = useState(null);
+
+            // --- 初始化與儲存 ---
+            useEffect(() => {
+                const savedData = localStorage.getItem('japanTripData_v1'); // 保持相同的 key 以免舊資料遺失
+                if (savedData) {
+                    const parsed = JSON.parse(savedData);
+                    setUsers(parsed.users || ['東霖']);
+                    setExpenses(parsed.expenses || []);
+                    setRate(parsed.rate || 0.053);
+                    setForeignCurr(parsed.foreignCurr || 'JPY');
+                    setHomeCurr(parsed.homeCurr || 'HKD');
+                }
+                setInvolved(users);
+            }, []);
+
+            useEffect(() => {
+                const dataToSave = { users, expenses, rate, foreignCurr, homeCurr };
+                localStorage.setItem('japanTripData_v1', JSON.stringify(dataToSave));
+            }, [users, expenses, rate, foreignCurr, homeCurr]);
+
+            useEffect(() => {
+                if (involved.length === users.length - 1 && !editingId) {
+                    setInvolved(users);
+                }
+            }, [users.length]);
+
+            // --- 輔助 Functions ---
+            const formatMoney = (val, type = 'FOREIGN') => {
+                if (type === 'HOME') {
+                    return `${(val * rate).toFixed(1)} ${homeCurr}`;
+                }
+                // 如果是 JPY 去掉小數點，其他保留兩位
+                const formattedVal = foreignCurr.toUpperCase() === 'JPY' ? parseFloat(val).toFixed(0) : parseFloat(val).toFixed(2);
+                return `${formattedVal} ${foreignCurr}`;
+            };
+
+            const resetForm = () => {
+                setAmount('');
+                setDescription('');
+                setInvolved(users);
+                setEditingId(null);
+            };
+
+            // --- 核心邏輯 ---
+            const handleAddUser = () => {
+                if (newUserName.trim() && !users.includes(newUserName.trim())) {
+                    const updatedUsers = [...users, newUserName.trim()];
+                    setUsers(updatedUsers);
+                    if (!editingId) setInvolved(updatedUsers);
+                    setNewUserName('');
+                }
+            };
+
+            const handleRemoveUser = (userToRemove) => {
+                if (confirm(`確定要移除 ${userToRemove} 嗎？這不會刪除已發生的帳務，但會影響整體計算。`)) {
+                    setUsers(users.filter(u => u !== userToRemove));
+                    setInvolved(involved.filter(u => u !== userToRemove));
+                    if (payer === userToRemove) setPayer(users[0] || '');
+                }
+            };
+
+            const handleSaveExpense = () => {
+                if (!amount || parseFloat(amount) <= 0) return alert("請輸入正確金額。");
+                if (!description.trim()) return alert("請輸入消費項目。");
+                if (involved.length === 0) return alert("請至少選擇一位分攤人。");
+
+                const expenseData = {
+                    date: editingId ? expenses.find(e => e.id === editingId).date : new Date().toLocaleString('zh-HK', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    amount: parseFloat(amount),
+                    description,
+                    payer,
+                    involved
+                };
+
+                if (editingId) {
+                    setExpenses(expenses.map(exp => exp.id === editingId ? { ...expenseData, id: editingId } : exp));
+                    alert("修改成功！");
+                } else {
+                    setExpenses([{ ...expenseData, id: Date.now() }, ...expenses]);
+                    alert("記帳成功！");
+                }
+                
+                resetForm();
+                if (editingId) setActiveTab('list');
+            };
+
+            const startEditExpense = (exp) => {
+                setAmount(exp.amount);
+                setDescription(exp.description);
+                setPayer(exp.payer);
+                setInvolved(exp.involved);
+                setEditingId(exp.id);
+                setActiveTab('add');
+            };
+
+            const deleteExpense = (id) => {
+                if (confirm("確定刪除這筆帳目？")) {
+                    setExpenses(expenses.filter(e => e.id !== id));
+                    if (editingId === id) resetForm();
+                }
+            };
+
+            const handleResetData = () => {
+                if (confirm("⚠️ 警告：這將會清除「所有」記帳紀錄與團友名單，無法復原！確定要重設嗎？")) {
+                    if (confirm("防呆確認：真的要清空所有資料嗎？")) {
+                        localStorage.removeItem('japanTripData_v1');
+                        setUsers(['東霖']);
+                        setExpenses([]);
+                        setRate(0.053);
+                        setForeignCurr('JPY');
+                        setHomeCurr('HKD');
+                        resetForm();
+                        setPayer('東霖');
+                        alert("資料已全部歸零。");
+                    }
+                }
+            };
+
+            // 複製到剪貼簿 (支援 iFrame 方案)
+            const copyToClipboard = () => {
+                let text = `💰 【旅行分帳總結】\
+`;
+                text += `總支出: ${formatMoney(totalSpent)} (約 ${formatMoney(totalSpent, 'HOME')})\
+\
+`;
+                
+                text += `📋 --- 帳目明細 ---\
+`;
+                expenses.forEach((exp, i) => {
+                    text += `${expenses.length - i}. ${exp.description} - ${formatMoney(exp.amount)} (${exp.payer} 先付)\
+`;
+                    text += `   [分攤: ${exp.involved.join(', ')}]\
+`;
+                });
+
+                text += `\
+⚖️ --- 最後結算 (${homeCurr}) ---\
+`;
+                if (settlementPlan.transactions.length === 0) {
+                    text += `目前無人虧欠，帳已平！\
+`;
+                } else {
+                    settlementPlan.transactions.forEach(t => {
+                        text += `${t.from} 給 ${t.to} ${formatMoney(t.amount, 'HOME').replace(homeCurr, '').trim()} ${homeCurr}\
+`;
+                    });
+                }
+                
+                text += `\
+(Generated by Universal Trip Splitter)`;
+
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    alert('✅ 結算報告已複製！可以直接貼到 WhatsApp 或 Excel 啦。');
+                } catch (err) {
+                    alert('複製失敗，請手動複製。');
+                }
+                document.body.removeChild(textArea);
+            };
+
+            // --- 結算演算法 ---
+            const settlementPlan = useMemo(() => {
+                let balances = {};
+                users.forEach(u => balances[u] = 0);
+
+                expenses.forEach(exp => {
+                    const paidBy = exp.payer;
+                    const splitAmount = exp.amount / exp.involved.length;
+                    
+                    if (balances[paidBy] !== undefined) balances[paidBy] += exp.amount;
+                    exp.involved.forEach(person => {
+                        if (balances[person] !== undefined) balances[person] -= splitAmount;
+                    });
+                });
+
+                let debtors = [];
+                let creditors = [];
+
+                Object.keys(balances).forEach(user => {
+                    const val = balances[user];
+                    if (val < -0.01) debtors.push({ user, amount: val }); 
+                    if (val > 0.01) creditors.push({ user, amount: val });
+                });
+
+                debtors.sort((a, b) => a.amount - b.amount); 
+                creditors.sort((a, b) => b.amount - a.amount);
+
+                let transactions = [];
+                let dIndex = 0, cIndex = 0;
+
+                while (dIndex < debtors.length && cIndex < creditors.length) {
+                    let debtor = debtors[dIndex];
+                    let creditor = creditors[cIndex];
+                    let amount = Math.min(Math.abs(debtor.amount), creditor.amount);
+
+                    transactions.push({ from: debtor.user, to: creditor.user, amount: amount });
+
+                    debtor.amount += amount;
+                    creditor.amount -= amount;
+
+                    if (Math.abs(debtor.amount) < 0.01) dIndex++;
+                    if (creditor.amount < 0.01) cIndex++;
+                }
+
+                return { balances, transactions };
+            }, [expenses, users]);
+
+            const totalSpent = expenses.reduce((sum, item) => sum + item.amount, 0);
+
+            useEffect(() => {
+                lucide.createIcons();
+            }, [activeTab, expenses, users, editingId]);
+
+
+            // --- UI 渲染 ---
+            return (
+                <div className="max-w-md mx-auto bg-white min-h-screen shadow-lg flex flex-col relative">
+                    
+                    {/* Header */}
+                    <header className="bg-blue-600 text-white p-4 sticky top-0 z-10 shadow-md">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h1 className="text-xl font-bold flex items-center gap-2">
+                                    <i data-lucide="globe"></i> 旅行分帳神器
+                                </h1>
+                                <p className="text-xs text-blue-100 mt-1">
+                                    總支出: {formatMoney(totalSpent)} 
+                                    <span className="opacity-80 ml-1">≈ {formatMoney(totalSpent, 'HOME')}</span>
+                                </p>
+                            </div>
+                            <button onClick={() => setActiveTab('settings')} className="p-2 active:scale-95 transition">
+                                <i data-lucide="settings"></i>
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 overflow-y-auto pb-24 p-4">
+                        
+                        {/* Tab: 新增/修改支出 (ADD/EDIT) */}
+                        {activeTab === 'add' && (
+                            <div className="space-y-6 animate-fade-in">
+                                {editingId && (
+                                    <div className="bg-yellow-50 text-yellow-800 p-2 rounded-lg text-sm flex justify-between items-center border border-yellow-200">
+                                        <span className="font-bold flex items-center gap-1"><i data-lucide="pencil" size="14"></i> 正在修改明細</span>
+                                        <button onClick={resetForm} className="text-gray-500 hover:text-gray-800 px-2 py-1 bg-white rounded shadow-sm text-xs border border-gray-200">取消修改</button>
+                                    </div>
+                                )}
+
+                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                    <label className="block text-sm text-gray-500 mb-1">金額 ({foreignCurr})</label>
+                                    <div className="relative flex items-center">
+                                        <input 
+                                            type="number" 
+                                            inputMode="decimal"
+                                            value={amount} 
+                                            onChange={(e) => setAmount(e.target.value)}
+                                            className="w-full pl-4 pr-16 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-2xl font-bold text-gray-800"
+                                            placeholder="0"
+                                        />
+                                        <span className="absolute right-4 text-gray-400 font-bold">{foreignCurr}</span>
+                                    </div>
+                                    {amount > 0 && (
+                                        <p className="text-right text-sm text-gray-500 mt-1">
+                                            ≈ {(amount * rate).toFixed(1)} {homeCurr}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-gray-500 mb-1">消費項目</label>
+                                    <input 
+                                        type="text" 
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder="例如：壽司郎, 7-11, 的士"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-500 mb-1">誰先付錢？</label>
+                                        <select 
+                                            value={payer} 
+                                            onChange={(e) => setPayer(e.target.value)}
+                                            className="w-full px-3 py-3 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        >
+                                            {users.map(u => <option key={u} value={u}>{u}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex items-end">
+                                        <button 
+                                            onClick={handleSaveExpense}
+                                            className={`w-full text-white font-bold py-3 rounded-lg shadow-lg active:scale-95 transition flex justify-center items-center gap-2 ${editingId ? 'bg-yellow-500' : 'bg-blue-600'}`}
+                                        >
+                                            <i data-lucide={editingId ? "save" : "plus"}></i> {editingId ? '儲存修改' : '記帳'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-gray-500 mb-2">誰有份？ (點擊切換)</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {users.map(u => {
+                                            const isSelected = involved.includes(u);
+                                            return (
+                                                <button 
+                                                    key={u}
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setInvolved(involved.filter(i => i !== u));
+                                                        } else {
+                                                            setInvolved([...involved, u]);
+                                                        }
+                                                    }}
+                                                    className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                                                        isSelected 
+                                                        ? 'bg-blue-100 text-blue-700 border-blue-200 border' 
+                                                        : 'bg-gray-100 text-gray-400 border-transparent border'
+                                                    }`}
+                                                >
+                                                    {u} {isSelected && '✓'}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    <div className="mt-2 text-xs text-gray-400 text-right">
+                                        {involved.length} 人分攤，每人 {amount > 0 ? formatMoney(amount / involved.length) : `0 ${foreignCurr}`}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tab: 列表 (LIST) */}
+                        {activeTab === 'list' && (
+                            <div className="space-y-4">
+                                {expenses.length === 0 ? (
+                                    <div className="text-center text-gray-400 mt-10">
+                                        <p>還沒有消費紀錄</p>
+                                        <p className="text-sm">按「記帳」開始第一筆</p>
+                                    </div>
+                                ) : (
+                                    expenses.map(exp => (
+                                        <div key={exp.id} className={`bg-white p-4 rounded-xl shadow-sm border ${editingId === exp.id ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100'} flex justify-between items-start transition-colors`}>
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-baseline mb-1">
+                                                    <h3 className="font-bold text-gray-800 text-lg">{exp.description}</h3>
+                                                    <span className="font-mono font-bold text-blue-600">{formatMoney(exp.amount)}</span>
+                                                </div>
+                                                <div className="text-xs text-gray-500 flex flex-col gap-1">
+                                                    <span>{exp.date} · <span className="text-gray-700 font-medium">{exp.payer}</span> 先付</span>
+                                                    <span>分攤: {exp.involved.join(', ')}</span>
+                                                </div>
+                                            </div>
+                                            <div className="ml-3 flex flex-col gap-2">
+                                                <button onClick={() => startEditExpense(exp)} className="p-2 text-gray-400 hover:text-blue-500 transition bg-gray-50 rounded-full">
+                                                    <i data-lucide="pencil" size="16"></i>
+                                                </button>
+                                                <button onClick={() => deleteExpense(exp.id)} className="p-2 text-gray-400 hover:text-red-500 transition bg-gray-50 rounded-full">
+                                                    <i data-lucide="trash-2" size="16"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+
+                        {/* Tab: 結算 (SETTLE) */}
+                        {activeTab === 'settle' && (
+                            <div className="space-y-6">
+                                <button 
+                                    onClick={copyToClipboard}
+                                    className="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-md active:scale-95 transition flex justify-center items-center gap-2"
+                                >
+                                    <i data-lucide="copy"></i> 一鍵複製結算報告 (WhatsApp)
+                                </button>
+
+                                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                                    <h2 className="font-bold text-gray-800 mb-4 border-b pb-2">最後誰給誰？ ({homeCurr})</h2>
+                                    {settlementPlan.transactions.length === 0 ? (
+                                        <p className="text-center text-green-500 font-bold py-4">目前無人虧欠，帳已平！🎉</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {settlementPlan.transactions.map((t, idx) => (
+                                                <div key={idx} className="flex items-center justify-between bg-blue-50 p-3 rounded-lg">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-gray-700">{t.from}</span>
+                                                        <span className="text-gray-400 text-xs">給</span>
+                                                        <span className="font-bold text-gray-700">{t.to}</span>
+                                                    </div>
+                                                    <div className="font-mono font-bold text-blue-600 text-lg">
+                                                        {formatMoney(t.amount, 'HOME')}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <p className="text-xs text-gray-400 text-center mt-2">
+                                                *此計算已將多筆債務抵銷，只需執行上述轉帳即可結清。
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                                    <h2 className="font-bold text-gray-800 mb-4 border-b pb-2">當前餘額狀態 ({homeCurr})</h2>
+                                    <div className="space-y-2">
+                                        {Object.entries(settlementPlan.balances).map(([user, balance]) => (
+                                            <div key={user} className="flex justify-between items-center text-sm">
+                                                <span>{user}</span>
+                                                <span className={`font-mono font-bold ${balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                    {balance > 0 ? '+' : ''}{formatMoney(balance, 'HOME')}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        <p className="text-xs text-gray-400 mt-2">正數 = 別人該給你的錢 (多付了)<br/>負數 = 你該給別人的錢 (少付了)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tab: 設定 (SETTINGS) */}
+                        {activeTab === 'settings' && (
+                            <div className="space-y-6">
+                                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                                    <h3 className="font-bold text-gray-800 mb-3">貨幣與匯率設定</h3>
+                                    
+                                    <div className="grid grid-cols-2 gap-4 mb-3">
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">外幣 (你輸入的金額)</label>
+                                            <input 
+                                                type="text" 
+                                                value={foreignCurr}
+                                                onChange={(e) => setForeignCurr(e.target.value.toUpperCase())}
+                                                className="w-full p-2 border rounded font-mono font-bold text-center"
+                                                placeholder="JPY, TWD..."
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">本幣 (結算用的貨幣)</label>
+                                            <input 
+                                                type="text" 
+                                                value={homeCurr}
+                                                onChange={(e) => setHomeCurr(e.target.value.toUpperCase())}
+                                                className="w-full p-2 border rounded font-mono font-bold text-center"
+                                                placeholder="HKD, USD..."
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 pt-2 border-t">
+                                        <span className="text-sm font-mono">1 {foreignCurr} = </span>
+                                        <input 
+                                            type="number" 
+                                            step="0.001"
+                                            value={rate}
+                                            onChange={(e) => setRate(parseFloat(e.target.value))}
+                                            className="flex-1 p-2 border rounded text-center font-mono font-bold bg-blue-50 focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                        <span className="text-sm font-mono">{homeCurr}</span>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                                    <h3 className="font-bold text-gray-800 mb-3">團友名單</h3>
+                                    <div className="flex gap-2 mb-4">
+                                        <input 
+                                            type="text" 
+                                            value={newUserName}
+                                            onChange={(e) => setNewUserName(e.target.value)}
+                                            placeholder="輸入名字"
+                                            className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                        <button 
+                                            onClick={handleAddUser}
+                                            className="bg-green-500 text-white px-4 py-2 rounded font-bold active:scale-95 transition"
+                                        >
+                                            新增
+                                        </button>
+                                    </div>
+                                    <ul className="space-y-2">
+                                        {users.map(u => (
+                                            <li key={u} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                                                <span>{u}</span>
+                                                {users.length > 1 && (
+                                                    <button onClick={() => handleRemoveUser(u)} className="text-red-400 px-2 py-1 hover:bg-red-50 rounded">
+                                                        <i data-lucide="x" size="16"></i>
+                                                    </button>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                {/* Danger Zone: Reset Data */}
+                                <div className="bg-red-50 p-4 rounded-xl shadow-sm border border-red-100">
+                                    <h3 className="font-bold text-red-600 mb-2 flex items-center gap-2">
+                                        <i data-lucide="trash-2" size="18"></i> 危險區域
+                                    </h3>
+                                    <p className="text-xs text-red-500 mb-3">旅程結束或需要重新開始時使用。注意：清除後無法復原。</p>
+                                    <button 
+                                        onClick={handleResetData}
+                                        className="w-full bg-red-600 text-white font-bold py-3 rounded-lg shadow-sm active:scale-95 transition"
+                                    >
+                                        重設所有資料
+                                    </button>
+                                </div>
+
+                                <div className="text-center text-gray-400 text-xs">
+                                    Universal Trip Splitter v2.0 <br/> Created for Donglin
+                                </div>
+                            </div>
+                        )}
+
+                    </main>
+
+                    {/* Navigation Bar */}
+                    <nav className="bg-white border-t border-gray-200 fixed bottom-0 w-full max-w-md flex justify-around py-3 pb-safe z-20">
+                        <button 
+                            onClick={() => { resetForm(); setActiveTab('add'); }}
+                            className={`flex flex-col items-center gap-1 text-xs ${activeTab === 'add' ? 'text-blue-600 font-bold' : 'text-gray-400'}`}
+                        >
+                            <i data-lucide="plus" size="24"></i>
+                            記帳
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('list')}
+                            className={`flex flex-col items-center gap-1 text-xs ${activeTab === 'list' ? 'text-blue-600 font-bold' : 'text-gray-400'}`}
+                        >
+                            <i data-lucide="list" size="24"></i>
+                            明細 ({expenses.length})
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('settle')}
+                            className={`flex flex-col items-center gap-1 text-xs ${activeTab === 'settle' ? 'text-blue-600 font-bold' : 'text-gray-400'}`}
+                        >
+                            <i data-lucide="users" size="24"></i>
+                            結算
+                        </button>
+                    </nav>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>",{"value":108},[],"ccustom-code-oarpEPdhcR","custom-code","c-custom-code",{},[],[],{"author":36,"canonicalMeta":116,"customMeta":117,"description":36,"imageUrl":36,"keywords":36,"language":118,"title":119,"isPreviewUrl":32},[],[],"en","日本分帳神器","consultation.tunglamlee.com","/japan-money-share","GGRywthOrCAkuZQDdlhj","日本旅費分攤工具","z0qnfpvIO1xAs1AooVHN",[126],{"id":127,"elements":128,"activeElementId":127},"hl_main_popup-730iSHpDU0",[129],{"extra":130,"class":146,"styles":152,"customCss":155,"id":127,"child":156,"meta":157,"title":158,"tag":36},{"bgImage":131,"overlayColor":133,"left":135,"popupDisabled":137,"popupHide":138,"minWidth":139,"showPopupOnMouseOut":141,"customClass":143,"position":145},{"value":132},{"mediaType":35,"url":36,"opacity":37,"options":38,"svgCode":36,"videoUrl":36,"videoThumbnail":36,"videoLoop":39},{"value":134},"var(--overlay)",{"value":136,"unit":66},50,{"value":32},{"value":32},{"value":140},"medium-page",{"value":142,"delay":99},"exit",{"value":144},[],{"value":89},{"borders":147,"borderRadius":149,"radiusEdge":151},{"value":148},"borderFull",{"value":150},"radius2",{"value":22},{"borderWidth":153},{"value":154,"unit":26},"10",[],[],"hl_main_popup","Popup","https://stcdn.leadconnectorhq.com/funnel/icon/favicon.ico","NkvikpUx7XyNpC0wzAly","Tung Lam Ai 工具","419d15e4-0a8a-4ae0-a3ec-85d94637ddd1",[],null,["Reactive",166],{"$snuxt-i18n-meta":167,"$spreviewState":168,"$smetaPixelOptions":374},{},{"defaultSettings":169,"mobileDevice":39,"tabletDevice":32,"funnelId":160,"funnelDomain":120,"stepId":162,"locationId":124,"funnelPageId":122,"locationCode":253,"funnelNextStep":254,"fingerprint":36,"funnelNextPageId":255,"stripePublishableKey":256,"enablePaymentElement":39,"merchantLoginId":36,"paypalPublishableKey":36,"merchantAccountId":-1,"stripeAccountId":257,"isLivePaymentMode":39,"version":258,"funnelSteps":259,"cartItems":353,"funnelName":161,"orderFormVersion":96,"currency":354,"businessCurrency":354,"blogSlug":36,"domain":120,"pageUrl":121,"pageName":123,"pageSeo":355,"affiliateId":-1,"videoExistsInPage":32,"pageType":356,"contactId":-1,"email":-1,"phone":36,"categoryId":36,"blogSearchTerm":36,"categoryUrlSlug":36,"authorSlug":36,"tagSlug":36,"authorId":36,"defaultPaymentProvider":36,"productCollections":357,"ecomSelectedCollection":36,"imageOptimizationEnabled":39,"nmiMerchantGatewayId":36,"squareMerchantGatewayId":36,"mercadoPagoUserId":36,"fontsToLoad":358,"ecomProductId":36,"isGdprCompliant":32,"isOptimisePageLoad":39,"ecommercePage":99,"isBlogActive":32,"blogData":359,"blogPaths":-1,"blogId":160,"allowedCookies":360,"paymentProviderDetails":-1,"events":361,"searchTerm":36,"countryList":362,"pixelToInit":163,"formAction":36,"ecomProduct":363,"requireCreditCard":39,"haveBlogWidget":32,"isFacebookIAB":32,"companyId":364,"customerLoginToken":36,"cookieConsentList":365,"cookieConsentExpiry":366,"mediaFormats":367,"adyenMerchantGatewayId":36,"webinarProperties":164,"webinarSession":164,"userWebinarSession":164,"turnstileToken":36,"turnstileType":369,"turnstileSiteKeys":370,"upsellInFlight":32,"mobileVisibilityDelays":373,"productDetailPageStyles":164,"geoCountry":164,"isCurrencyFormattingEnabled":32},{"typography":170,"background":191,"percentWidth":196,"offsetColor":230,"progressBarSize":243},{"fonts":171,"colors":182},{"headlineFont":172,"contentFont":178},{"id":173,"text":174,"value":175},"headlinefont","Headline Font",{"text":176,"value":177},"Inter","var(--inter)",{"id":179,"text":180,"value":181},"contentfont","Content Font",{"text":176,"value":177},{"textColor":183,"linkColor":187},{"value":184},{"label":185,"value":186},"var(--black)","#000000",{"value":188},{"label":189,"value":190},"var(--blue)","#188bf6",{"bgImage":192,"backgroundColor":194},{"value":193},{"url":36,"options":38},{"value":195},"var(--white)",[197,200,203,206,209,212,215,218,221,224,227],{"text":198,"value":199},"0 Percent","progress0",{"text":201,"value":202},"10 Percent","progress10",{"text":204,"value":205},"20 Percent","progress20",{"text":207,"value":208},"30 Percent","progress30",{"text":210,"value":211},"40 Percent","progress40",{"text":213,"value":214},"50 Percent","progress50",{"text":216,"value":217},"60 Percent","progress60",{"text":219,"value":220},"70 Percent","progress70",{"text":222,"value":223},"80 Percent","progress80",{"text":225,"value":226},"90 Percent","progress90",{"text":228,"value":229},"100 Percent","progress100",[231,234,237,240],{"text":232,"value":233},"White","progressbarOffsetWhite",{"text":235,"value":236},"Transparent White","progressbarOffsetTransparentWhite",{"text":238,"value":239},"Black","progressbarOffsetBlack",{"text":241,"value":242},"Transparent Black","progressbarOffsetTransparentBlack",[244,247,250],{"text":245,"value":246},"Small","progressbarSmall",{"text":248,"value":249},"Medium","progressbarMedium",{"text":251,"value":252},"Large","progressbarLarge","HK","/eatwhat","6HZExGN1B5B55eHJpNof","pk_live_MtxwO3obi7pfD7UZlGkfR2yj","acct_1IQ2c4ESEdwrbb28",4,[260,266,271,277,282,289,296,303,310,317,323,329,335,341,343,347],{"url":261,"value":262,"type":263,"sequence":99,"id":264,"name":265,"split":32},"/subtitleconversiontoolv1","49e5da9e-d96e-4999-b59a-af10dcf2e801","optin_funnel_page","hOxuEXPHuRfD33j2c50t","subtitleconversiontoolv1",{"url":267,"value":268,"type":263,"sequence":96,"id":269,"name":270,"split":32},"/terms--conditions","eb9f4ef1-af89-4d95-aaa0-5dfb4be7a379","9F2bLovdEgu2Hb1ze2uo","Terms & Conditions",{"url":272,"value":273,"type":263,"sequence":274,"id":275,"name":276},"/privacy-policy","66e70d2b-57f4-46b5-8e17-1c1d6ec521cd",3,"KIFTKwk5aiDArQhFMSUq","Privacy Policy",{"url":278,"value":279,"type":263,"sequence":258,"id":280,"name":281,"split":32},"/store","35cd816d-082b-499c-94f1-22366f1050b6","4JViIMs0Yy3chTbUZL2x","store",{"url":283,"value":284,"key":285,"type":281,"sequence":286,"id":287,"name":288},"/products-list","609d9310-9eee-4a7f-98e0-7b2211452053","store-product-list",5,"JtfUOY0q3GKX2GAsqomw","Products List",{"url":290,"value":291,"key":292,"type":281,"sequence":293,"id":294,"name":295},"/product-details","73bbb088-6980-443a-ae50-e64fccb0b01d","store-product-detail",6,"bqg0kOHUDXx0obXonVO6","Product details",{"url":297,"value":298,"key":299,"type":281,"sequence":300,"id":301,"name":302},"/cart","e630ba50-0d78-4ef7-ae07-c5680c1f0426","store-cart",7,"Ox5XRtQuPyX7ZRb6ETXD","Cart",{"url":304,"value":305,"key":306,"type":281,"sequence":307,"id":308,"name":309},"/checkout","d5a5714b-0122-4645-9250-a4e189b3bdc2","store-checkout",8,"boadZ4SCrudXyhUwDZki","Checkout",{"url":311,"value":312,"key":313,"type":281,"sequence":314,"id":315,"name":316},"/thank-you","3a43732a-4fac-4a43-a554-8025d64a6bf7","store-thank-you",9,"agsGULY09C0eHcWuVOIj","Thank you!",{"url":318,"value":319,"type":263,"sequence":320,"id":321,"name":322},"/deepseek0-100","9a0ccdec-70be-4b85-a459-e965011d1723",10,"b2RD3tkG2kjNxYNmxNom","清華大學的DeepSeek從入門到精通",{"url":324,"value":325,"type":263,"sequence":326,"id":327,"name":328},"/redbookvideodownloader","0a48a681-5baf-4a95-9304-933734cbd36c",11,"HU05ww24geImBhWvFMtI","redbookvideodownloader",{"url":330,"value":331,"type":263,"sequence":332,"id":333,"name":334},"/redbookvideodownloader-1797","2e3b9fb8-4d19-4c54-9abe-771982bf66b8",12,"sJd6wL4shdHxT9992uTm","redbookvideodownloader (Clone)",{"url":336,"value":337,"type":263,"sequence":338,"id":339,"name":340},"/redbookvideodownloader-1797-3897","c52d6ace-820d-4c62-95c8-ed0f7a5ed5f6",13,"4hj7jMzikdRFVNVztC3U","redbookvideodownloader (Clone) (Clone)",{"url":121,"value":162,"type":263,"sequence":342,"id":122,"name":123,"split":32},14,{"url":254,"value":344,"type":263,"sequence":345,"id":255,"name":346,"split":32},"31ab5f65-9f02-4235-adeb-8023254eed25",15,"宜家食乜好",{"url":348,"value":349,"type":263,"sequence":350,"id":351,"name":352},"/goinghealthy","2a20ef01-f164-4a4e-98b4-db8d223db855",16,"s9fFLhNHiEkOyBPEL0mM","食左藥未",[],"HKD",{"title":119,"description":36,"imageUrl":36},"website",[],[],{},[],[],[],{},"6OG4V5AzharZc0hLTvXm",[],["Date","2026-08-29T23:37:02.372Z"],{"formats":368},[],"invisible",{"invisibleSiteKey":371,"visibleSiteKey":372},"0x4AAAAAACCpVlau-4k7cJ33","0x4AAAAAACDfuwSBQ2sYO1VD",["Map"],{"pixelID":164,"disabled":32,"track":375,"version":376,"isEnabled":39,"pixelLoaded":32,"manualMode":39,"userData":164,"eventsQueue":377},"PageView","2.0",[],["Set"],["ShallowReactive",380],{"pageData":-1}]</script></body></html>
