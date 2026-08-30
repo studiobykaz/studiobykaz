@@ -25,7 +25,7 @@
 
         const App = () => {
             // --- 狀態 State ---
-            const [users, setUsers] = useState(['東霖']);
+            const [users, setUsers] = useState(['Kevin']);
             const [expenses, setExpenses] = useState([]);
             
             // 貨幣Settings
@@ -50,7 +50,7 @@
                 const savedData = localStorage.getItem('japanTripData_v1'); // 保持相同的 key 以免舊資料遺失
                 if (savedData) {
                     const parsed = JSON.parse(savedData);
-                    setUsers(parsed.users || ['東霖']);
+                    setUsers(parsed.users || ['Kevin']);
                     setExpenses(parsed.expenses || []);
                     setRate(parsed.rate || 0.053);
                     setForeignCurr(parsed.foreignCurr || 'JPY');
@@ -150,13 +150,13 @@
                 if (confirm("⚠️ 警告：這將會清除「所有」Record紀錄與Group Members，無法復原！確定要重設嗎？")) {
                     if (confirm("Confirmation: Do you really want to clear all data?")) {
                         localStorage.removeItem('japanTripData_v1');
-                        setUsers(['東霖']);
+                        setUsers(['Kevin']);
                         setExpenses([]);
                         setRate(0.053);
                         setForeignCurr('JPY');
                         setHomeCurr('HKD');
                         resetForm();
-                        setPayer('東霖');
+                        setPayer('Kevin');
                         alert("資料已全部歸零。");
                     }
                 }
