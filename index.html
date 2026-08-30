@@ -73,11 +73,11 @@
             // --- 輔助 Functions ---
             const formatMoney = (val, type = 'FOREIGN') => {
                 if (type === 'HOME') {
-                    return `${(val * rate).toFixed(1)} ${homeCurr}`;
+                    return `${homeCurr} ${(val * rate).toFixed(2)}`;
                 }
                 // 如果是 JPY 去掉小數點，其他保留兩位
                 const formattedVal = foreignCurr.toUpperCase() === 'JPY' ? parseFloat(val).toFixed(0) : parseFloat(val).toFixed(2);
-                return `${formattedVal} ${foreignCurr}`;
+                return `${foreignCurr} ${formattedVal}`;
             };
 
             const resetForm = () => {
@@ -188,7 +188,7 @@
 `;
                 } else {
                     settlementPlan.transactions.forEach(t => {
-                        text += `${t.from} gives ${t.to} ${formatMoney(t.amount, 'HOME').replace(homeCurr, '').trim()} ${homeCurr}\
+                        text += `${t.from} gives ${t.to} ${homeCurr} ${(t.amount * rate).toFixed(2)}\
 `;
                     });
                 }
