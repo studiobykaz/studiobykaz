@@ -30,7 +30,7 @@
             
             // 貨幣Settings
             const [homeCurr, setHomeCurr] = useState('HKD');
-            const [rates, setRates] = useState({ JPY: 0.053 });
+            const [rates, setRates] = useState({});
             const [newCurrCode, setNewCurrCode] = useState('');
             const [newCurrRate, setNewCurrRate] = useState('');
 
@@ -513,7 +513,7 @@
                                 </button>
 
                                 <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                                    <h2 className="font-bold text-gray-800 mb-4 border-b pb-2">Who Owes Who? ({homeCurr})</h2>
+                                    <h2 className="font-bold text-gray-800 mb-4 border-b pb-2">Who pays who? ({homeCurr})</h2>
                                     {settlementPlan.transactions.length === 0 ? (
                                         <p className="text-center text-green-500 font-bold py-4">All settled!</p>
                                     ) : (
@@ -564,16 +564,9 @@
                                             onChange={(e) => setHomeCurr(e.target.value)}
                                             className="w-full p-3 border rounded-lg bg-white font-mono font-bold text-center text-base focus:ring-2 focus:ring-blue-500 outline-none"
                                         >
-                                            <option value="HKD">HKD</option>
-                                            <option value="JPY">JPY</option>
-                                            <option value="CNY">CNY</option>
-                                            <option value="USD">USD</option>
-                                            <option value="EUR">EUR</option>
-                                            <option value="GBP">GBP</option>
-                                            <option value="TWD">TWD</option>
-                                            <option value="KRW">KRW</option>
-                                            <option value="SGD">SGD</option>
-                                            <option value="AUD">AUD</option>
+                                            {Array.from(new Set(['HKD', ...Object.keys(rates)])).map(c => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>
