@@ -136,6 +136,14 @@
                 }
             };
 
+            const handleRemoveCurrency = (currToRemove) => {
+                if (confirm(`Remove exchange rate for ${currToRemove}?`)) {
+                    const updated = { ...rates };
+                    delete updated[currToRemove];
+                    setRates(updated);
+                }
+            };
+
             const handleAddUser = () => {
                 if (newUserName.trim() && !users.includes(newUserName.trim())) {
                     const updatedUsers = [...users, newUserName.trim()];
