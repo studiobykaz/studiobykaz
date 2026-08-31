@@ -148,13 +148,14 @@
                 const expenseData = {
                     date: editingId ? expenses.find(e => e.id === editingId).date : (() => {
                         const now = new Date();
-                        const m = now.getMonth() + 1;
+                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                         const d = now.getDate();
+                        const m = months[now.getMonth()];
                         let h = now.getHours();
                         const min = String(now.getMinutes()).padStart(2, '0');
                         const ampm = h >= 12 ? 'PM' : 'AM';
                         h = h % 12 || 12;
-                        return `${m}/${d}, ${h}:${min} ${ampm}`;
+                        return `${d} ${m}, ${h}:${min} ${ampm}`;
                     })(),
                     amount: parseFloat(amount),
                     currency: currency.toUpperCase(),
