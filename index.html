@@ -102,8 +102,14 @@
                 return `${curr.toUpperCase()} ${formattedVal}`;
             };
 
-            const formatHome = (val) => {
-                return `${homeCurr} ${parseFloat(val).toFixed(2)}`;
+            const formatHome = (val, includeSign = false) => {
+                const num = parseFloat(val);
+                const absVal = Math.abs(num).toFixed(2);
+                if (includeSign) {
+                    if (num > 0) return `+${homeCurr} ${absVal}`;
+                    if (num < 0) return `-${homeCurr} ${absVal}`;
+                }
+                return `${homeCurr} ${absVal}`;
             };
 
             const resetForm = () => {
@@ -506,7 +512,7 @@
                                             <div key={user} className="flex justify-between items-center text-sm">
                                                 <span>{user}</span>
                                                 <span className={`font-mono font-bold ${balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                                    {balance > 0 ? '+' : ''}{formatHome(balance)}
+                                                    {formatHome(balance, true)}
                                                 </span>
                                             </div>
                                         ))}
