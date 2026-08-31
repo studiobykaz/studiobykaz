@@ -480,7 +480,7 @@
                                                         <span className="font-bold text-gray-700">{t.to}</span>
                                                     </div>
                                                     <div className="font-mono font-bold text-blue-600 text-lg">
-                                                        {formatMoney(t.amount, 'HOME')}
+                                                        {formatHome(t.amount)}
                                                     </div>
                                                 </div>
                                             ))}
@@ -498,7 +498,7 @@
                                             <div key={user} className="flex justify-between items-center text-sm">
                                                 <span>{user}</span>
                                                 <span className={`font-mono font-bold ${balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                                    {balance > 0 ? '+' : ''}{formatMoney(balance, 'HOME')}
+                                                    {balance > 0 ? '+' : ''}{formatHome(balance)}
                                                 </span>
                                             </div>
                                         ))}
