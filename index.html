@@ -30,13 +30,13 @@
             
             // 貨幣Settings
             const [homeCurr, setHomeCurr] = useState('HKD');
+            const [rates, setRates] = useState({ JPY: 0.053, CNY: 1.08, USD: 7.8, EUR: 8.5, GBP: 10.0, TWD: 0.25, KRW: 0.006, SGD: 7.4, AUD: 5.2, HKD: 1.0 });
 
             const [activeTab, setActiveTab] = useState('add');
             
             // 表單臨時狀態
             const [amount, setAmount] = useState('');
             const [currency, setCurrency] = useState('HKD');
-            const [exchangeRate, setExchangeRate] = useState('1.0');
             const [description, setDescription] = useState('');
             const [payer, setPayer] = useState(users[0] || 'Kevin');
             const [involved, setInvolved] = useState([]);
@@ -47,27 +47,37 @@
 
             // --- 初始化與儲存 ---
             useEffect(() => {
-                const savedData = localStorage.getItem('japanTripData_v2'); 
+                const savedData = localStorage.getItem('japanTripData_v3'); 
                 if (savedData) {
                     const parsed = JSON.parse(savedData);
                     setUsers(parsed.users || ['Kevin']);
                     setExpenses(parsed.expenses || []);
                     setHomeCurr(parsed.homeCurr || 'HKD');
+                    if (parsed.rates) setRates(parsed.rates);
                 } else {
-                    const oldData = localStorage.getItem('japanTripData_v1');
+                    const oldData = localStorage.getItem('japanTripData_v2');
                     if (oldData) {
                         try {
                             const parsedOld = JSON.parse(oldData);
                             setUsers(parsedOld.users || ['Kevin']);
                             setHomeCurr(parsedOld.homeCurr || 'HKD');
                             if (parsedOld.expenses) {
-                                const rate = parsedOld.rate || 1.0;
-                                const curr = parsedOld.foreignCurr || 'JPY';
-                                setExpenses(parsedOld.expenses.map(e => ({
-                                    ...e,
-                                    currency: curr,
-                                    exchangeRate: rate
-                                })));
+                                let newRates = { ...rates };
+                                setExpenses(parsedOld.expenses.map(e => {
+                                    if (e.currency && e.exchangeRate) {
+                                        newRates[e.currency] = e.exchangeRate;
+                                    }
+                                    return {
+                                        date: e.date,
+                                        amount: e.amount,
+                                        currency: e.currency || 'HKD',
+                                        description: e.description,
+                                        payer: e.payer,
+                                        involved: e.involved,
+                                        id: e.id
+                                    };
+                                }));
+                                setRates(newRates);
                             }
                         } catch(e) {}
                     }
@@ -76,9 +86,9 @@
             }, []);
 
             useEffect(() => {
-                const dataToSave = { users, expenses, homeCurr };
-                localStorage.setItem('japanTripData_v2', JSON.stringify(dataToSave));
-            }, [users, expenses, homeCurr]);
+                const dataToSave = { users, expenses, homeCurr, rates };
+                localStorage.setItem('japanTripData_v3', JSON.stringify(dataToSave));
+            }, [users, expenses, homeCurr, rates]);
 
             useEffect(() => {
                 if (involved.length === users.length - 1 && !editingId) {
@@ -99,7 +109,6 @@
             const resetForm = () => {
                 setAmount('');
                 setCurrency('HKD');
-                setExchangeRate('1.0');
                 setDescription('');
                 setPayer(users[0] || '');
                 setInvolved(users);
@@ -127,7 +136,6 @@
             const handleSaveExpense = () => {
                 if (!amount || parseFloat(amount) <= 0) return alert("Please enter a valid amount.");
                 if (!currency.trim()) return alert("Please enter currency.");
-                if (!exchangeRate || parseFloat(exchangeRate) <= 0) return alert("Please enter a valid exchange rate.");
                 if (!description.trim()) return alert("請輸入Expense Description。");
                 if (involved.length === 0) return alert("Please select at least one person to split with.");
 
@@ -135,7 +143,6 @@
                     date: editingId ? expenses.find(e => e.id === editingId).date : new Date().toLocaleString('zh-HK', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                     amount: parseFloat(amount),
                     currency: currency.toUpperCase(),
-                    exchangeRate: parseFloat(exchangeRate),
                     description,
                     payer,
                     involved
@@ -156,7 +163,6 @@
             const startEditExpense = (exp) => {
                 setAmount(exp.amount);
                 setCurrency(exp.currency || 'HKD');
-                setExchangeRate(exp.exchangeRate !== undefined ? exp.exchangeRate : 1.0);
                 setDescription(exp.description);
                 setPayer(exp.payer);
                 setInvolved(exp.involved);
@@ -174,11 +180,13 @@
             const handleResetData = () => {
                 if (confirm("⚠️ 警告：這將會清除「所有」Record紀錄與Group Members，無法復原！確定要重設嗎？")) {
                     if (confirm("Confirmation: Do you really want to clear all data?")) {
+                        localStorage.removeItem('japanTripData_v3');
                         localStorage.removeItem('japanTripData_v2');
                         localStorage.removeItem('japanTripData_v1');
                         setUsers(['Kevin']);
                         setExpenses([]);
                         setHomeCurr('HKD');
+                        setRates({ JPY: 0.053, CNY: 1.08, USD: 7.8, EUR: 8.5, GBP: 10.0, TWD: 0.25, KRW: 0.006, SGD: 7.4, AUD: 5.2, HKD: 1.0 });
                         resetForm();
                         setPayer('Kevin');
                         alert("資料已全部歸零。");
@@ -231,7 +239,8 @@
                     const splitCount = exp.involved.length;
                     if (splitCount === 0) return;
 
-                    const rateVal = exp.exchangeRate !== undefined ? exp.exchangeRate : 1.0;
+                    const curr = (exp.currency || 'HKD').toUpperCase();
+                    const rateVal = curr === homeCurr.toUpperCase() ? 1.0 : (rates[curr] !== undefined ? rates[curr] : 1.0);
                     const amountInHome = exp.amount * rateVal;
                     const splitAmount = amountInHome / splitCount;
 
@@ -271,9 +280,13 @@
                 }
 
                 return { balances, transactions };
-            }, [expenses, users]);
+            }, [expenses, users, rates, homeCurr]);
 
-            const totalSpentHome = expenses.reduce((sum, item) => sum + (item.amount * (item.exchangeRate || 1.0)), 0);
+            const totalSpentHome = expenses.reduce((sum, item) => {
+                const curr = (item.currency || 'HKD').toUpperCase();
+                const rateVal = curr === homeCurr.toUpperCase() ? 1.0 : (rates[curr] !== undefined ? rates[curr] : 1.0);
+                return sum + (item.amount * rateVal);
+            }, 0);
 
             useEffect(() => {
                 lucide.createIcons();
@@ -346,22 +359,8 @@
                                     </div>
 
                                     {currency.toUpperCase() !== homeCurr.toUpperCase() && (
-                                        <div>
-                                            <label className="block text-xs text-gray-500 mb-1">Exchange Rate (1 {currency.toUpperCase()} = ? {homeCurr})</label>
-                                            <input 
-                                                type="number" 
-                                                step="0.0001"
-                                                value={exchangeRate} 
-                                                onChange={(e) => setExchangeRate(e.target.value)}
-                                                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none font-mono font-bold bg-white"
-                                                placeholder="1.0"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {amount > 0 && currency.toUpperCase() !== homeCurr.toUpperCase() && (
                                         <p className="text-right text-sm text-gray-500">
-                                            ≈ {homeCurr} {(amount * (parseFloat(exchangeRate) || 1.0)).toFixed(2)}
+                                            ≈ {homeCurr} {(amount * (rates[currency.toUpperCase()] || 1.0)).toFixed(2)}
                                         </p>
                                     )}
                                 </div>
@@ -531,6 +530,28 @@
                                             className="w-full p-2 border rounded font-mono font-bold text-center uppercase"
                                             placeholder="HKD, USD..."
                                         />
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                                    <h3 className="font-bold text-gray-800 mb-3">Exchange Rates (1 Foreign = ? {homeCurr})</h3>
+                                    <div className="space-y-3">
+                                        {Object.keys(rates).filter(c => c !== homeCurr.toUpperCase()).map(curr => (
+                                            <div key={curr} className="flex items-center gap-3">
+                                                <span className="w-16 font-mono font-bold text-gray-700">{curr}</span>
+                                                <input 
+                                                    type="number" 
+                                                    step="0.0001"
+                                                    value={rates[curr]}
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value) || 0;
+                                                        setRates({ ...rates, [curr]: val });
+                                                    }}
+                                                    className="flex-1 p-2 border rounded text-center font-mono font-bold bg-blue-50 focus:ring-2 focus:ring-blue-500 outline-none"
+                                                />
+                                                <span className="text-xs text-gray-400 w-12">{homeCurr}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
