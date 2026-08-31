@@ -146,7 +146,7 @@
                 if (involved.length === 0) return alert("Please select at least one person to split with.");
 
                 const expenseData = {
-                    date: editingId ? expenses.find(e => e.id === editingId).date : new Date().toLocaleString('zh-HK', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    date: editingId ? expenses.find(e => e.id === editingId).date : new Date().toLocaleString('en-US', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                     amount: parseFloat(amount),
                     currency: currency.toUpperCase(),
                     description,
