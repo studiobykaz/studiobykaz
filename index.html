@@ -323,16 +323,25 @@
                                                 inputMode="decimal"
                                                 value={amount} 
                                                 onChange={(e) => setAmount(e.target.value)}
-                                                className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-2xl font-bold text-gray-800"
+                                                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-2xl font-bold text-gray-800"
                                                 placeholder="0"
                                             />
-                                            <input 
-                                                type="text" 
-                                                value={currency}
-                                                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                                                className="w-24 px-3 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-lg font-bold text-center bg-white"
-                                                placeholder="HKD"
-                                            />
+                                            <select 
+                                                value={currency} 
+                                                onChange={(e) => setCurrency(e.target.value)}
+                                                className="w-28 px-2 py-3 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-base font-bold"
+                                            >
+                                                <option value="HKD">HKD</option>
+                                                <option value="JPY">JPY</option>
+                                                <option value="CNY">CNY</option>
+                                                <option value="USD">USD</option>
+                                                <option value="EUR">EUR</option>
+                                                <option value="GBP">GBP</option>
+                                                <option value="TWD">TWD</option>
+                                                <option value="KRW">KRW</option>
+                                                <option value="SGD">SGD</option>
+                                                <option value="AUD">AUD</option>
+                                            </select>
                                         </div>
                                     </div>
 
