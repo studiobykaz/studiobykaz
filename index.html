@@ -216,7 +216,7 @@
             };
 
             const handleResetData = () => {
-                if (confirm("⚠️ 警告：這將會清除「所有」Record紀錄與Group Members，無法復原！確定要重設嗎？")) {
+                if (confirm("⚠️ Warning: This will clear all expense records and group members and cannot be undone. Are you sure you want to reset?")) {
                     if (confirm("Confirmation: Do you really want to clear all data?")) {
                         localStorage.removeItem('japanTripData_v3');
                         localStorage.removeItem('japanTripData_v2');
@@ -224,10 +224,10 @@
                         setUsers(['Kevin']);
                         setExpenses([]);
                         setHomeCurr('HKD');
-                        setRates({ JPY: 0.053, CNY: 1.08, USD: 7.8, EUR: 8.5, GBP: 10.0, TWD: 0.25, KRW: 0.006, SGD: 7.4, AUD: 5.2, HKD: 1.0 });
+                        setRates({ JPY: 0.053 });
                         resetForm();
                         setPayer('Kevin');
-                        alert("資料已全部歸零。");
+                        alert("All data has been reset.");
                     }
                 }
             };
