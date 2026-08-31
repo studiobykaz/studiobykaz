@@ -136,14 +136,7 @@
                 }
             };
 
-            const handleRemoveCurrency = (currToRemove) => {
-                if (confirm(`Remove exchange rate for ${currToRemove}?`)) {
-                    const updated = { ...rates };
-                    delete updated[currToRemove];
-                    setRates(updated);
-                }
-            };
-                if (newUserName.trim() && !users.includes(newUserName.trim())) {
+            const handleAddUser = () => {
                     const updatedUsers = [...users, newUserName.trim()];
                     setUsers(updatedUsers);
                     if (!editingId) setInvolved(updatedUsers);
