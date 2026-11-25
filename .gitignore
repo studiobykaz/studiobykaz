@@ -1,0 +1,21 @@
+# OpenClaw private workspace & assistant memory files (never publish to public GitHub Pages)
+AGENTS.md
+BOOTSTRAP.md
+HEARTBEAT.md
+IDENTITY.md
+MEMORY.md
+SOUL.md
+TOOLS.md
+USER.md
+memory/
+media/
+skills/
+canva-integration/
+node_modules/
+package.json
+package-lock.json
+*.py
+*.js
+*.sh
+*.sqlite*
+*.json

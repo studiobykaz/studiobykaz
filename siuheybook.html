@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小氣簿</title>
+<meta property="og:title" content="小氣簿">
+<meta property="og:description" content="I'm such a petty person — 記低啲嬲事，發張正式警告信。">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background-color:#F6F1DC;background-image:linear-gradient(to right, transparent 0 55px, rgba(196,90,90,.45) 55px 57px, transparent 57px 100%),repeating-linear-gradient(to bottom, rgba(196,90,90,.35) 0 1px, transparent 1px 96px),repeating-linear-gradient(to bottom, rgba(74,131,163,.4) 0 1px, transparent 1px 16px);background-attachment:fixed;font-family:'Noto Sans TC',system-ui,sans-serif;color:#181A16;-webkit-text-size-adjust:100%}
+a{color:#2E4A43}
+a:hover{color:#1d332e}
+input,textarea,select,button{font-family:'Noto Sans TC',system-ui,sans-serif}
+button{color:#181A16}
+input:focus,textarea:focus,select:focus{outline:2px solid #2E4A43;outline-offset:-1px}
+.setup-name-field{font-family:'BiauKai','Kaiti TC','Kaiti SC','DFKai-SB','KaiTi','STKaiti',cursive}
+.setup-name-field::placeholder{color:#16233F;opacity:1}
+@media (max-width: 480px) {
+  body { font-size: 15px; }
+  .responsive-container { max-width: 100% !important; padding: 0 12px 32px !important; }
+  .modal-content { max-width: 100% !important; padding: 16px 16px 20px !important; margin: 0 12px !important; }
+  header { padding: 20px 0 14px; gap: 8px; }
+  header h1 { font-size: 28px; }
+  header p { font-size: 12px; margin-top: 6px; }
+  button { word-wrap: break-word; white-space: normal !important; overflow: visible !important; text-overflow: clip !important; padding: 8px 10px !important; font-size: 13px !important; min-height: 36px; }
+}
+@media print{
+  [data-print-hide="true"]{display:none !important}
+  body{background:#fff}
+  [data-notice-overlay="true"]{position:static !important;inset:auto !important;overflow:visible !important;height:auto !important;background:#fff !important}
+}
+</style>
+</head>
+<body>
+
+<div style="max-width:520px;margin:0 auto;min-height:100vh;padding:0 16px 48px;position:relative" class="responsive-container">
+<header style="padding:28px 0 18px;border-bottom:2px solid #181A16">
+  <h1 style="font-family:'Noto Serif TC',serif;font-weight:700;font-size:32px;line-height:1.15;letter-spacing:.02em;margin:0">小氣簿</h1>
+  <p style="color:#4A4E46;font-size:13.5px;margin-top:8px;line-height:1.65">人類就係難明嘅生物。嬲鳩你唔會同你講，只會默默寫低，一直累積到臨界點就會爆炸。呢本簿係用嚟記低嗰啲嘢，到時你就唔好話冇警告過你。</p>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px">
+    <button id="btnEditProfile" style="padding:7px 10px;border:none;background:none;font-size:12.5px;color:#7C8177;cursor:pointer">改Profile</button>
+    <input id="fileInput" type="file" accept="application/json" style="display:none">
+    <button id="btnLoadDemo" style="padding:7px 10px;border:none;background:none;font-size:12.5px;color:#7C8177;cursor:pointer">載入Demo</button>
+    <button id="btnWipe" style="padding:7px 10px;border:none;background:none;font-size:12.5px;color:#7C8177;cursor:pointer">清空全部</button>
+  </div>
+</header>
+
+<div style="display:flex;gap:8px;padding:14px 0;flex-wrap:wrap">
+  <div style="flex:1;min-width:88px;background:#FCFCFA;border:1px solid #D8DAD2;border-radius:3px;padding:10px 12px">
+    <div id="statFiles" style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600">0</div>
+    <div style="font-size:11px;color:#7C8177;margin-top:2px">個 File</div>
+  </div>
+  <div style="flex:1;min-width:88px;background:#FCFCFA;border:1px solid #D8DAD2;border-radius:3px;padding:10px 12px">
+    <div id="statEvents" style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600">0</div>
+    <div style="font-size:11px;color:#7C8177;margin-top:2px">件嬲事</div>
+  </div>
+  <div id="statAlertBox" style="flex:1;min-width:88px;border-radius:3px;padding:10px 12px;border:1px solid #D8DAD2;background:#FCFCFA">
+    <div id="statAlerts" style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:#181A16">0</div>
+    <div style="font-size:11px;color:#7C8177;margin-top:2px">激到你就爆炸</div>
+  </div>
+</div>
+
+<button id="btnNewFile" style="width:100%;margin-top:4px;padding:14px 18px;background:#181A16;color:#F7F8F4;border:1px solid #181A16;border-radius:3px;font-size:15px;font-weight:600;cursor:pointer">開佢 File</button>
+
+<div id="noActiveContainer" style="display:none;border:1px dashed #B7BBAE;padding:40px 20px;text-align:center;margin-top:22px;background:#FCFCFA;border-radius:3px">
+  <p style="color:#7C8177;margin-bottom:4px">尚未有 File</p>
+  <p style="color:#7C8177;font-size:13px;margin:0">點擊上方「開佢 File」開始記錄你嘅怨氣。</p>
+</div>
+
+<div id="activeFilesList" style="display:flex;flex-direction:column;gap:22px;margin-top:22px"></div>
+
+<div id="inactiveContainer" style="display:none;margin-top:34px;padding-top:14px;border-top:1px dashed #B7BBAE">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#7C8177;margin-bottom:16px">已絕交</div>
+  <div id="inactiveFilesList" style="display:flex;flex-direction:column;gap:14px"></div>
+</div>
+
+<footer style="margin-top:40px;padding-top:16px;border-top:1px solid #D8DAD2;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#7C8177;line-height:1.8">
+  資料只存喺你部機嘅瀏覽器（localStorage），冇上傳去任何伺服器。<br>清瀏覽器資料會一併清走卷宗，重要嘅記得匯出備份。
+  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:10px">
+    <button id="btnExport" style="padding:4px 9px;border:1px solid #B7BBAE;background:#FCFCFA;border-radius:2px;font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:#4A4E46;cursor:pointer">匯出備份</button>
+    <button id="btnImport" style="padding:4px 9px;border:1px solid #B7BBAE;background:#FCFCFA;border-radius:2px;font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:#4A4E46;cursor:pointer">匯入備份</button>
+  </div>
+</footer>
+</div>
+
+<!-- Modal Sheets & Overlays -->
+<div id="modalOverlay" style="display:none;position:fixed;inset:0;background:rgba(24,26,22,.42);z-index:200;align-items:flex-end;justify-content:center">
+  <div id="sheetContent" class="modal-content" style="background:#FCFCFA;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;border-radius:12px 12px 0 0;padding:22px 20px 26px;box-shadow:0 -4px 24px rgba(0,0,0,.18)"></div>
+</div>
+
+<!-- Profile Setup Modal -->
+<div id="setupOverlay" style="display:none;position:fixed;inset:0;background:rgba(24,26,22,.72);z-index:400;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px 0">
+    <p style="color:#F7F8F4;font-family:'Noto Serif TC',serif;font-size:14.5px;margin:0;text-align:center;line-height:1.6">先同我講多一兩樣嘢，會用喺警告信下款</p>
+    <div style="position:relative;width:100%;aspect-ratio:4/5;border-radius:6px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.45);background:#333">
+      <div id="coverContainer" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px">小氣簿 Cover</div>
+      <input id="setupNameInput" placeholder="你叫咩名？" class="setup-name-field" style="position:absolute;left:31.5%;width:65%;bottom:22.3%;height:4.3%;background:none;border:none;outline:none;font-weight:600;color:#16233F;font-size:18px;padding:0;margin:0;line-height:1">
+      <select id="setupGenderSelect" style="position:absolute;left:31.5%;width:65%;bottom:13.4%;height:4.3%;background:none;border:none;outline:none;font-family:'Noto Serif TC',serif;font-weight:600;color:#16233F;font-size:16px;padding:0;margin:0;line-height:1">
+        <option value="" disabled selected>請選擇</option>
+        <option value="f">女</option>
+        <option value="m">男</option>
+        <option value="other">Walmart Shopping Bag</option>
+        <option value="eunuch">太監</option>
+        <option value="single">單春</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;width:100%;justify-content:flex-end">
+      <button id="setupCancelBtn" style="display:none;padding:11px 16px;background:#FCFCFA;border:1px solid #D8DAD2;border-radius:2px;color:#4A4E46;cursor:pointer">取消</button>
+      <button id="setupSaveBtn" style="padding:11px 20px;background:#181A16;color:#F7F8F4;border:1px solid #181A16;border-radius:2px;font-size:14px;font-weight:600;cursor:pointer">確定</button>
+    </div>
+  </div>
+</div>
+
+<!-- Warning Notice / PDF Overlay -->
+<div id="noticeOverlay" style="display:none;position:fixed;inset:0;background-color:#F6F1DC;background-image:linear-gradient(to right, transparent 0 55px, rgba(196,90,90,.45) 55px 57px, transparent 57px 100%),repeating-linear-gradient(to bottom, rgba(196,90,90,.35) 0 1px, transparent 1px 96px),repeating-linear-gradient(to bottom, rgba(74,131,163,.4) 0 1px, transparent 1px 16px);z-index:300;overflow-y:auto">
+  <div style="max-width:560px;margin:0 auto;padding:0 0 40px">
+    <div data-print-hide="true" style="display:flex;gap:8px;padding:14px 16px;position:sticky;top:0;background:rgba(246,241,220,0.9);backdrop-filter:blur(4px);z-index:2">
+      <button id="noticeBackBtn" style="padding:9px 14px;border:1px solid #B7BBAE;background:#FCFCFA;border-radius:2px;font-size:13px;cursor:pointer">← 返回</button>
+      <div style="flex:1"></div>
+      <button id="noticePdfBtn" style="padding:9px 14px;border:1px solid #B7BBAE;background:#FCFCFA;border-radius:2px;font-size:13px;cursor:pointer">下載可填寫PDF</button>
+      <button id="noticeImgBtn" style="padding:9px 14px;border:1px solid #B7BBAE;background:#FCFCFA;border-radius:2px;font-size:13px;cursor:pointer">Save落相簿</button>
+      <button id="noticeEmailBtn" style="padding:9px 14px;background:#181A16;color:#F7F8F4;border:1px solid #181A16;border-radius:2px;font-size:13px;font-weight:600;cursor:pointer">Email 佢</button>
+    </div>
+    <div id="noticeArticleContainer"></div>
+  </div>
+</div>
+
+<script>
+// --- Constants & Data ---
+const KEY = "siuheybook_data_v1";
+const REL_LEVELS = {
+  hibye:{label:"Hi Bye Friend",threshold:50}, colleague:{label:"同事",threshold:40},
+  classmate:{label:"舊同學",threshold:45}, friend:{label:"普通朋友",threshold:35},
+  goodpal:{label:"好朋友",threshold:28}, bestie:{label:"老 Best",threshold:15},
+  crush:{label:"Crush",threshold:30}, bf:{label:"男朋友／老公",threshold:10},
+  gf:{label:"女朋友／老婆",threshold:100}, ex:{label:"EX",threshold:20},
+  parent:{label:"父母",threshold:20}, sibling:{label:"兄弟姊妹",threshold:18},
+  netfriend:{label:"網友",threshold:45}, stranger:{label:"陌生人",threshold:60},
+  pet:{label:"寵物",threshold:80}
+};
+const MONEY_FIX_TEXT = "承諾於＿＿＿＿年＿＿月＿＿日前，透過 PayMe／轉數快／現金／其他（請圈出）償還 $＿＿＿＿＿";
+const CATS = {
+  noreason:{label:"冇原因就係嬲佢",placeholder:"就係睇佢唔順眼",fixes:["唔使做啲咩，只係想你知道我有呢個感覺","下次注意一下自己嘅態度","如果你有察覺，主動問我一聲"]},
+  late:{label:"遲到甩底",placeholder:"約好七點，佢八點先到，途中冇通知過我",fixes:["改動行程提早四個鐘通知，唔好等到我出咗門先講","講唔到準時就直接講遲幾多分鐘，唔好講『就到』","連續兩次爽約嘅話，下次由你揀日子同埋你請"]},
+  noreply:{label:"已讀不回",placeholder:"發咗訊息，三日都未覆",fixes:["覆唔到就一句『而家忙，今晚覆你』，五秒嘅事","分清急事同閒聊，急事我會打電話，請你接","唔想覆得咁密可以直接同我講頻率，我會遷就"]},
+  money:{label:"借錢唔還",placeholder:"上年借嘅錢講咗還三次，到而家都未還",fixes:["寫低金額同還款日，唔使靠記性","還唔到就主動講新日期，唔好等我問","舊數未清之前唔再開新口，呢個係底線", MONEY_FIX_TEXT]},
+  words:{label:"講嘢唔睇場合",placeholder:"喺朋友面前講我個人嘅嘢，令我好尷尬",fixes:["我叫停嗰陣就即刻停，唔好加多句『開玩笑咋』","唔肯定啱唔啱講嘅，私底下講，唔好喺人前講","傷到人嘅時候，一句直接嘅道歉好過解釋動機"]},
+  gossip:{label:"亂爆秘密",placeholder:"我私底下同佢講嘅嘢，喺聚會上當笑話講咗出嚟",fixes:["我講嘅私事預設唔外傳，除非我明講可以","第三者問起，一句『你問返佢啦』就夠","如果已經講咗出去，主動同我講，我寧願由你口中知"]},
+  selfish:{label:"有佢講冇人講",placeholder:"成晚佢一個人講自己嘢，我完全插唔到嘴",fixes:["我講緊嘢嘅時候唔好打斷，等我講完先接","偶爾問返我一句近況，唔使深入，有問就得","約會地點同活動輪流揀，唔好次次都遷就你"]},
+  promise:{label:"講完唔做",placeholder:"應承咗幫我做嘅事，一個月後仲係冇動靜",fixes:["做唔到嘅就唔好應承，我接受你拒絕","中途做唔到就即刻講，早講永遠好過爛尾","同一件事失信兩次之後，我唔會再靠你嗰part"]},
+  respect:{label:"踩親我條底線",placeholder:"我明明講過唔想佢咁做，佢照做",fixes:["我講『唔好』嗰陣即係唔好，唔使再試探","我劃嘅界線唔需要理由，接受咗就得","唔同意可以傾，但係唔可以當我冇講過"]},
+  disrespect:{label:"唔尊重我",placeholder:"喺人前笑我，或者當我講嘅嘢冇所謂",fixes:["我講嘢嗰陣專心聽，唔好一路玩電話","唔認同都好，聽晒先出聲，唔好中途打斷","喺人前唔好恰我或者爆我料，有意見返屋企先講"]},
+  noemovalue:{label:"唔提供情緒價值",placeholder:"我同你訴苦，你玩緊電話完全冇反應",fixes:["我唔開心嗰陣，至少畀十分鐘專心聽我講","唔識安慰唔緊要，但唔好句句都潑冷水","我嬲嗰陣想要嘅係陪伴，唔係即時解決方案"]},
+  cheatmoney:{label:"呃錢",placeholder:"話請食飯，一到埋單就去廁所",fixes:["還錢！"]},
+  dreamanger:{label:"係個夢度激親我",placeholder:"發夢先到佢拖住第個",fixes:["夢係我自己發，但我而家就係不爽","比我夢到，證明係個天比暗示我，請你解釋","以後攬返住我訓"]},
+  nowashhand:{label:"去廁所唔洗手",placeholder:"去完廁所出嚟隻手乾爭爭，仲要冇梘液味",fixes:["洗手係基本，唔洗手唔好掂到我","以後邊洗手邊唱兩次happy birthday","買機票即刻搬去印度"]},
+  other:{label:"其他",placeholder:"記低發生咗咩事",fixes:["下次即場講出嚟，唔好等到累積","一齊搵個雙方都做得到嘅做法","如果我誤會咗，都想聽你解釋"]}
+};
+const SEV_HINT = {1:"1 · 小事，講咗就算",2:"2 · 小事，但係第二次",3:"3 · 開始有啲煩",4:"4 · 影響到心情一日",5:"5 · 明顯唔尊重我",6:"6 · 影響到我實際安排",7:"7 · 傷到感情",8:"8 · 重複犯，同一個問題",9:"9 · 動搖緊信任",10:"10 · 踩到我條底線，冇得當冇事發生"};
+const GOOD_CATS = {
+  apology:{label:"主動道歉",placeholder:"認低威，仲講得出口"}, emotion:{label:"提供情緒價值",placeholder:"聽你訴苦聽到深夜都冇彈過"},
+  treat:{label:"請食飯",placeholder:"唔使你講已經買咗單"}, help:{label:"幫手做野",placeholder:"主動搞掂咗件麻煩事"},
+  gift:{label:"送禮物 / 驚喜",placeholder:"無端端整咗個驚喜畀你"}, care:{label:"記得你講過嘅事",placeholder:"你隨口講過嘅小事，佢仲記得"},
+  standup:{label:"為你出頭",placeholder:"喺人前企埋你嗰邊"}, effort:{label:"主動搵你",placeholder:"好耐冇聯絡，佢主動約你"},
+  other:{label:"其他",placeholder:"總之令你覺得窩心"}
+};
+
+// State
+let db = { files: [] };
+let currentSheet = null;
+let activeFileId = null;
+let activeEventId = null;
+
+// Helpers
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const todayISO = () => new Date().toISOString().slice(0,10);
+const evScore = e => e.type==="good" ? -e.severity : e.severity;
+const rawScoreOf = f => f.events.reduce((s,e)=>s+evScore(e),0);
+const scoreOf = f => Math.max(0, rawScoreOf(f) - (f.clearedScore||0));
+function caseNo(f){ const d=new Date(f.created || Date.now()); return "DIU-"+d.getFullYear()+"-"+String(f.seq).padStart(3,"0"); }
+function thresholdClause(t){
+  return t===0
+    ? "，惟鑑於《小氣簿》之執法標準具有高度彈性，並奉行「龍門任我搬」之原則，本人有權因應實際情況及個人意願，決定是否發出警告信。基於上述情況，本人現決定向你發出書面警告，以作正式紀錄。"
+    : "，已超過 "+t+" 分門檻。基於上述情況，本人決定向你發出書面警告，以作正式紀錄。";
+}
+function statusOf(f){
+  const sc=scoreOf(f), p = f.threshold>0 ? sc/f.threshold : 1;
+  const pct = Math.min(100, Math.round(p*100));
+  if(p>=1) return {pct,text:"嬲到核爆",color:"#A32D22",bg:"#F5DEDA",bar:"#A32D22"};
+  if(p>=.6) return {pct,text:"佢GG了",color:"#B07A16",bg:"#F5E8CE",bar:"#B07A16"};
+  if(sc>0) return {pct,text:"觀察中",color:"#2E4A43",bg:"#DCE6E1",bar:"#2E4A43"};
+  return {pct,text:"表現良好",color:"#2E4A43",bg:"#DCE6E1",bar:"#2E4A43"};
+}
+function toChineseDate(d){
+  const digits=["〇","一","二","三","四","五","六","七","八","九"];
+  const year=String(d.getFullYear()).split("").map(c=>digits[+c]).join("");
+  const num=n=>{ if(n<10) return digits[n]; if(n===10) return "十"; if(n<20) return "十"+digits[n%10]; const t=Math.floor(n/10),u=n%10; return digits[t]+"十"+(u?digits[u]:""); };
+  return year+"年"+num(d.getMonth()+1)+"月"+num(d.getDate())+"日";
+}
+
+// SVG Seal Generator
+function generateSealSvg(name){
+  const text = (name || "小氣簿").slice(0,4);
+  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="46" fill="none" stroke="%23A32D22" stroke-width="4"/>
+    <circle cx="50" cy="50" r="41" fill="none" stroke="%23A32D22" stroke-width="1.5"/>
+    <text x="50" y="55" font-family="Noto Serif TC, serif" font-weight="700" font-size="18" fill="%23A32D22" text-anchor="middle" dominant-baseline="middle">${text}</text>
+  </svg>`;
+}
+
+function initData(){
+  try{ const r=localStorage.getItem(KEY); if(r) db=JSON.parse(r); }catch(e){}
+  if(!db.files) db.files=[];
+  if(!db.ownerName){
+    document.getElementById("setupOverlay").style.display = "flex";
+  }
+  render();
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} render(); }
+
+// --- Rendering UI ---
+function render(){
+  // Stats
+  const activeFiles = db.files.filter(f=>!f.inactive);
+  const inactiveFiles = db.files.filter(f=>f.inactive);
+  const totalEvents = db.files.reduce((acc,f)=>acc+f.events.length,0);
+  const alertFiles = activeFiles.filter(f=>scoreOf(f)>=f.threshold);
+
+  document.getElementById("statFiles").textContent = activeFiles.length;
+  document.getElementById("statEvents").textContent = totalEvents;
+  document.getElementById("statAlerts").textContent = alertFiles.length;
+  
+  const statAlertBox = document.getElementById("statAlertBox");
+  if(alertFiles.length > 0){
+    statAlertBox.style.borderColor = "#A32D22";
+    statAlertBox.style.background = "#F5DEDA";
+    document.getElementById("statAlerts").style.color = "#A32D22";
+  } else {
+    statAlertBox.style.borderColor = "#D8DAD2";
+    statAlertBox.style.background = "#FCFCFA";
+    document.getElementById("statAlerts").style.color = "#181A16";
+  }
+
+  // Active / No active
+  const noActiveContainer = document.getElementById("noActiveContainer");
+  const activeFilesList = document.getElementById("activeFilesList");
+  activeFilesList.innerHTML = "";
+
+  if(activeFiles.length === 0){
+    noActiveContainer.style.display = "block";
+  } else {
+    noActiveContainer.style.display = "none";
+    activeFiles.forEach(f => {
+      const cNo = caseNo(f);
+      const st = statusOf(f);
+      const sc = scoreOf(f);
+      const isTop = alertFiles.length > 0 && f === alertFiles[0];
+      const borderColor = isTop ? "#A32D22" : "#D8DAD2";
+      
+      let html = `
+      <section style="background:#FCFCFA;border:1px solid ${borderColor};border-radius:0 3px 3px 3px;position:relative">
+        <div style="position:absolute;top:-23px;left:-1px;background:#FCFCFA;border:1px solid ${borderColor};border-bottom:none;border-radius:3px 12px 0 0;padding:4px 16px 3px 12px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:${isTop?'#A32D22':'#7C8177'};font-weight:${isTop?'700':'400'}">
+          ${cNo}${isTop?' · 死KAML':''}
+        </div>
+        <div style="padding:24px 18px 16px;border-bottom:1px dashed #D8DAD2">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <div style="font-family:'Noto Serif TC',serif;font-size:21px;font-weight:600;line-height:1.25;flex:1">${escapeHtml(f.name)}</div>
+            <button onclick="openEditFile('${f.id}')" style="flex-shrink:0;padding:6px 8px;background:none;border:none;color:#ABAFA3;font-size:11px;cursor:pointer;white-space:nowrap">編輯資料</button>
+            ${sc >= f.threshold ? `<button onclick="openNotice('${f.id}')" style="flex-shrink:0;padding:6px 12px;background:#A32D22;color:#FDF4F2;border:1px solid #A32D22;border-radius:2px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">出警告信</button>` : `<button onclick="openVerbal('${f.id}')" style="flex-shrink:0;padding:6px 12px;background:#E8B923;color:#181A16;border:1px solid #E8B923;border-radius:2px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">口頭警告</button>`}
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7C8177;margin-top:3px">門檻：${f.threshold}分 · 建立於 ${f.created ? new Date(f.created).toISOString().slice(0,10) : ''}</div>
+          <div style="margin-top:14px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600">${sc}<span style="font-size:13px;color:#7C8177;font-weight:400"> / ${f.threshold}</span></span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;padding:3px 8px;border-radius:2px;background:${st.bg};color:${st.color}">${st.text}</span>
+            </div>
+            <div style="height:8px;background:#EAEBE4;border-radius:4px;overflow:hidden">
+              <div style="height:100%;width:${st.pct}%;background:${st.bar};border-radius:4px"></div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:4px 18px;max-height:240px;overflow-y:auto">
+      `;
+
+      if(f.events.length > 0){
+        f.events.forEach(ev => {
+          const isGood = ev.type === "good";
+          const sign = isGood ? "-" : "+";
+          const color = isGood ? "#2E4A43" : "#A32D22";
+          const catObj = isGood ? GOOD_CATS[ev.cat] : CATS[ev.cat];
+          html += `
+          <div style="display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:baseline;padding:10px 0;border-bottom:1px solid #D8DAD2">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:${color}">${sign}${ev.severity}</span>
+            <div>
+              <p style="font-size:12px;font-weight:600;margin:0;color:${color}">${catObj ? catObj.label : ev.cat}</p>
+              <p style="font-size:10px;color:#7C8177;margin:3px 0 0"><span style="font-family:'IBM Plex Mono',monospace">${ev.date}</span>${ev.desc ? ' · '+escapeHtml(ev.desc) : ''}</p>
+            </div>
+            <div style="display:flex;gap:2px">
+              <button onclick="editEvent('${f.id}','${ev.id}')" style="border:none;background:none;color:#7C8177;cursor:pointer;font-size:13px;padding:4px">✎</button>
+              <button onclick="deleteEvent('${f.id}','${ev.id}')" style="border:none;background:none;color:#7C8177;cursor:pointer;font-size:15px;padding:4px">×</button>
+            </div>
+          </div>`;
+        });
+      } else {
+        html += `<div style="padding:18px 0;color:#7C8177;font-size:13.5px;text-align:center">行為良好，未激嬲過你。</div>`;
+      }
+
+      const clearedScore = f.clearedScore || 0;
+      html += `
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;padding:14px 14px 16px;border-top:1px dashed #D8DAD2">
+          <button onclick="openAddEvent('${f.id}')" style="flex:1;min-width:70px;padding:8px 6px;border:1px solid #B7BBAE;background:#FCFCFA;border-radius:2px;font-size:11.5px;font-weight:500;cursor:pointer">今次嬲咩</button>
+          <button onclick="openAddGood('${f.id}')" style="flex:1;min-width:70px;padding:8px 6px;border:1px solid #2E4A43;color:#2E4A43;background:#FCFCFA;border-radius:2px;font-size:11.5px;font-weight:500;cursor:pointer">做咗好嘢</button>
+          <button onclick="resetFileScore('${f.id}')" style="flex:1;min-width:60px;padding:8px 4px;border:none;background:none;color:#7C8177;border-radius:2px;font-size:11.5px;cursor:pointer">動態清零</button>
+          <button onclick="restoreFileScore('${f.id}')" ${clearedScore===0?'disabled style="opacity:0.4;cursor:not-allowed"':''} style="flex:1;min-width:80px;padding:8px 4px;border:none;background:none;color:#2E4A43;border-radius:2px;font-size:11.5px;cursor:pointer">翻舊帳(+${clearedScore}分)</button>
+          <button onclick="cutoffFile('${f.id}')" style="flex:1;min-width:50px;padding:8px 4px;border:none;background:none;color:#A32D22;border-radius:2px;font-size:11.5px;cursor:pointer">絕交</button>
+        </div>
+      </section>`;
+      
+      const div = document.createElement("div");
+      div.innerHTML = html;
+      activeFilesList.appendChild(div);
+    });
+  }
+
+  // Inactive Files
+  const inactiveContainer = document.getElementById("inactiveContainer");
+  const inactiveFilesList = document.getElementById("inactiveFilesList");
+  inactiveFilesList.innerHTML = "";
+  if(inactiveFiles.length > 0){
+    inactiveContainer.style.display = "block";
+    inactiveFiles.forEach(f => {
+      const badCount = f.events.filter(e=>e.type!=="good").length;
+      const goodCount = f.events.filter(e=>e.type==="good").length;
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <section style="opacity:.6;filter:grayscale(.3);background:#FCFCFA;border:1px solid #D8DAD2;border-radius:3px;padding:16px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:140px">
+            <div style="font-family:'Noto Serif TC',serif;font-size:17px;font-weight:600">${escapeHtml(f.name)}</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#7C8177;margin-top:2px">已絕交 · 嬲咗${badCount}次．讚咗${goodCount}次</div>
+          </div>
+          <button onclick="makeFriendsAgain('${f.id}')" style="padding:7px 12px;border:1px solid #B7BBAE;background:#FCFCFA;border-radius:2px;font-size:12.5px;cursor:pointer">做返 Friend</button>
+          <button onclick="permaDeleteFile('${f.id}')" style="padding:7px 10px;border:none;background:none;color:#7C8177;font-size:12px;cursor:pointer">永久銷毀</button>
+        </section>`;
+      inactiveFilesList.appendChild(div);
+    });
+  } else {
+    inactiveContainer.style.display = "none";
+  }
+}
+
+function escapeHtml(str){
+  return (str||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// --- Action Handlers ---
+document.getElementById("btnNewFile").onclick = () => {
+  activeFileId = null;
+  openNewFileModal();
+};
+
+function openNewFileModal(fileId){
+  const f = fileId ? db.files.find(x=>x.id===fileId) : null;
+  activeFileId = fileId || null;
+  
+  const content = `
+    <h3 style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:600;margin:0 0 16px">${f?'編輯卷宗':'開新 File'}</h3>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">條仆街叫咩名</label>
+      <input id="nfName" value="${f?escapeHtml(f.name):''}" placeholder="周樂狗" style="width:100%;padding:10px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">性別</label>
+      <select id="nfGender" style="width:100%;padding:9px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff">
+        <option value="f" ${f&&f.gender==='f'?'selected':''}>女</option>
+        <option value="m" ${f&&f.gender==='m'?'selected':''}>男</option>
+        <option value="other" ${f&&f.gender==='other'?'selected':''}>Walmart Shopping Bag</option>
+        <option value="eunuch" ${f&&f.gender==='eunuch'?'selected':''}>太監</option>
+        <option value="single" ${f&&f.gender==='single'?'selected':''}>單春</option>
+      </select>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">關係係點</label>
+      <select id="nfRelLevel" onchange="onRelLevelChange()" style="width:100%;padding:9px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff">
+        ${Object.entries(REL_LEVELS).map(([k,v])=>`<option value="${k}" ${f&&f.relLevel===k?'selected':(!f&&k==='hibye'?'selected':'')}>${v.label}</option>`).join('')}
+      </select>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">爆炸門檻（累計分）</label>
+      <input id="nfThresh" type="number" min="0" max="200" value="${f?f.threshold:REL_LEVELS.hibye.threshold}" style="width:100%;padding:10px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff">
+      <div style="font-size:11px;color:#7C8177;margin-top:6px">填 0 即係「龍門任我搬」，即開file已核爆</div>
+    </div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#7C8177;border-top:1px dashed #D8DAD2;padding-top:12px;margin:16px 0 12px">內部資料 — 唔會出現喺警告信入面</div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">電郵地址 用於發送警告信（選填）</label>
+      <input id="nfEmail" type="email" value="${f&&f.email?escapeHtml(f.email):''}" placeholder="abc@example.com" style="width:100%;padding:10px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveNewFile()" style="flex:1;padding:12px;background:#181A16;color:#F7F8F4;border:none;border-radius:2px;font-size:14.5px;font-weight:600;cursor:pointer">儲存</button>
+      <button onclick="closeModal()" style="padding:12px 16px;background:none;border:1px solid #D8DAD2;border-radius:2px;color:#7C8177;cursor:pointer">取消</button>
+    </div>`;
+  
+  document.getElementById("sheetContent").innerHTML = content;
+  document.getElementById("modalOverlay").style.display = "flex";
+}
+
+function onRelLevelChange(){
+  const k = document.getElementById("nfRelLevel").value;
+  if(REL_LEVELS[k]){
+    document.getElementById("nfThresh").value = REL_LEVELS[k].threshold;
+  }
+}
+
+function openEditFile(id){ openNewFileModal(id); }
+
+function saveNewFile(){
+  const name = document.getElementById("nfName").value.trim();
+  if(!name){ alert("條仆街叫咩名？填低先。"); return; }
+  const gender = document.getElementById("nfGender").value;
+  const relLevel = document.getElementById("nfRelLevel").value;
+  const threshold = parseInt(document.getElementById("nfThresh").value) || 0;
+  const email = document.getElementById("nfEmail").value.trim();
+
+  if(activeFileId){
+    const f = db.files.find(x=>x.id===activeFileId);
+    if(f){ Object.assign(f, {name, gender, relLevel, threshold, email}); }
+  } else {
+    db.files.push({
+      id: uid(), seq: db.files.length+1, name, gender, relLevel, threshold, email,
+      cutoff:"maybe", priority:"mid", note:"", created: Date.now(), events:[]
+    });
+  }
+  closeModal();
+  save();
+}
+
+function closeModal(){
+  document.getElementById("modalOverlay").style.display = "none";
+}
+
+// --- Event Modals ---
+function openAddEvent(fileId, eventId){
+  activeFileId = fileId;
+  activeEventId = eventId || null;
+  const f = db.files.find(x=>x.id===fileId);
+  const ev = eventId && f ? f.events.find(x=>x.id===eventId) : null;
+
+  const catsHtml = Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${ev&&ev.cat===k?'selected':''}>${v.label}</option>`).join('');
+  
+  const content = `
+    <h3 style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:600;margin:0 0 16px">${ev?'修改嬲事':'今次又嬲咩？'}</h3>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">類別</label>
+      <select id="evCat" style="width:100%;padding:9px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff">${catsHtml}</select>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">具體發生咗咩事？<span style="text-transform:none;letter-spacing:0;color:#B7BBAE"> 選填</span></label>
+      <textarea id="evDesc" placeholder="就係睇佢唔順眼" style="width:100%;min-height:70px;padding:10px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff;resize:vertical">${ev&&ev.desc?escapeHtml(ev.desc):''}</textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div style="flex:1">
+        <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">日期</label>
+        <input id="evDate" type="date" value="${ev?ev.date:todayISO()}" style="width:100%;padding:9px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff">
+      </div>
+    </div>
+    <div style="margin-bottom:18px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">嚴重程度</label>
+      <div style="display:flex;align-items:center;gap:14px">
+        <input id="evSevRange" type="range" min="1" max="11" step="1" value="${ev?(ev.severity===50?11:ev.severity):5}" oninput="onSevInput(this)" style="flex:1;accent-color:#2E4A43">
+        <span id="evSevVal" style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;min-width:44px;text-align:right">${ev?(ev.severity===50?50:ev.severity):5}</span>
+      </div>
+      <p id="evSevHint" style="font-size:12.5px;color:#7C8177;margin-top:6px">${SEV_HINT[ev&&ev.severity!==50?ev.severity:5]||""}</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveEvent()" style="flex:1;padding:12px;background:#181A16;color:#F7F8F4;border:none;border-radius:2px;font-size:14.5px;font-weight:600;cursor:pointer">記低條數</button>
+      <button onclick="closeModal()" style="padding:12px 16px;background:none;border:1px solid #D8DAD2;border-radius:2px;color:#7C8177;cursor:pointer">取消</button>
+    </div>`;
+
+  document.getElementById("sheetContent").innerHTML = content;
+  document.getElementById("modalOverlay").style.display = "flex";
+}
+
+function onSevInput(el){
+  const v = parseInt(el.value);
+  const actual = v===11 ? 50 : v;
+  document.getElementById("evSevVal").textContent = actual;
+  document.getElementById("evSevHint").textContent = v===11 ? "馬德鐘：扣你50分" : (SEV_HINT[v]||"");
+}
+
+function saveEvent(){
+  const cat = document.getElementById("evCat").value;
+  const desc = document.getElementById("evDesc").value.trim();
+  const date = document.getElementById("evDate").value || todayISO();
+  const sevVal = parseInt(document.getElementById("evSevRange").value);
+  const severity = sevVal === 11 ? 50 : sevVal;
+
+  const f = db.files.find(x=>x.id===activeFileId);
+  if(!f) return;
+
+  if(activeEventId){
+    const ev = f.events.find(x=>x.id===activeEventId);
+    if(ev){ Object.assign(ev, {cat, desc, date, severity}); }
+  } else {
+    f.events.unshift({ id:uid(), type:"bad", cat, desc, date, severity, fixes: CATS[cat].fixes.slice(0,2) });
+  }
+  closeModal();
+  save();
+}
+
+function editEvent(fileId, eventId){ openAddEvent(fileId, eventId); }
+function deleteEvent(fileId, eventId){
+  const f = db.files.find(x=>x.id===fileId);
+  if(!f) return;
+  f.events = f.events.filter(x=>x.id!==eventId);
+  save();
+}
+
+// --- Good Deeds ---
+function openAddGood(fileId){
+  activeFileId = fileId;
+  const catsHtml = Object.entries(GOOD_CATS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  const content = `
+    <h3 style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:600;margin:0 0 16px;color:#2E4A43">做咗咩好嘢？</h3>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">類別</label>
+      <select id="gdCat" style="width:100%;padding:9px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff">${catsHtml}</select>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">具體做咗咩好嘢？<span style="text-transform:none;letter-spacing:0;color:#B7BBAE"> 選填</span></label>
+      <textarea id="gdDesc" placeholder="主動買咗嘢食" style="width:100%;min-height:70px;padding:10px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div style="flex:1">
+        <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">日期</label>
+        <input id="gdDate" type="date" value="${todayISO()}" style="width:100%;padding:9px 11px;border:1px solid #B7BBAE;border-radius:2px;font-size:14px;background:#fff">
+      </div>
+    </div>
+    <div style="margin-bottom:18px">
+      <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8177;margin-bottom:6px">加返佢幾多分（抵銷分數）</label>
+      <div style="display:flex;align-items:center;gap:14px">
+        <input id="gdSevRange" type="range" min="1" max="10" step="1" value="5" oninput="onGdSevInput(this)" style="flex:1;accent-color:#2E4A43">
+        <span id="gdSevVal" style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;min-width:44px;text-align:right">5</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveGood()" style="flex:1;padding:12px;background:#2E4A43;color:#F7F8F4;border:none;border-radius:2px;font-size:14.5px;font-weight:600;cursor:pointer">抵銷分數</button>
+      <button onclick="closeModal()" style="padding:12px 16px;background:none;border:1px solid #D8DAD2;border-radius:2px;color:#7C8177;cursor:pointer">取消</button>
+    </div>`;
+
+  document.getElementById("sheetContent").innerHTML = content;
+  document.getElementById("modalOverlay").style.display = "flex";
+}
+
+function onGdSevInput(el){
+  document.getElementById("gdSevVal").textContent = el.value;
+}
+
+function saveGood(){
+  const cat = document.getElementById("gdCat").value;
+  const desc = document.getElementById("gdDesc").value.trim();
+  const date = document.getElementById("gdDate").value || todayISO();
+  const severity = parseInt(document.getElementById("gdSevRange").value) || 5;
+
+  const f = db.files.find(x=>x.id===activeFileId);
+  if(!f) return;
+
+  f.events.unshift({ id:uid(), type:"good", cat, desc, date, severity });
+  closeModal();
+  save();
+}
+
+// --- Score Management ---
+function resetFileScore(fileId){
+  const f = db.files.find(x=>x.id===fileId);
+  if(!f) return;
+  const currentRaw = rawScoreOf(f);
+  if(currentRaw <= 0) return;
+  if(confirm("動態清零會將現有分數暫時歸零（收納入舊帳），確定？")){
+    f.clearedScore = (f.clearedScore || 0) + currentRaw;
+    save();
+  }
+}
+
+function restoreFileScore(fileId){
+  const f = db.files.find(x=>x.id===fileId);
+  if(!f) return;
+  if(!f.clearedScore) return;
+  if(confirm(`確定要翻舊帳，加回之前清零嘅 ${f.clearedScore} 分？`)){
+    f.clearedScore = 0;
+    save();
+  }
+}
+
+function cutoffFile(fileId){
+  const f = db.files.find(x=>x.id===fileId);
+  if(!f) return;
+  if(confirm(`確定要同「${f.name}」絕交？`)){
+    f.inactive = true;
+    save();
+  }
+}
+
+function makeFriendsAgain(fileId){
+  const f = db.files.find(x=>x.id===fileId);
+  if(!f) return;
+  f.inactive = false;
+  save();
+}
+
+function permaDeleteFile(fileId){
+  if(confirm("永久銷毀此卷宗將無法復原，確定？")){
+    db.files = db.files.filter(x=>x.id!==fileId);
+    save();
+  }
+}
+
+// --- Warning Notice / PDF Generation ---
+function openNotice(fileId){
+  const f = db.files.find(x=>x.id===fileId);
+  if(!f) return;
+
+  const cNo = caseNo(f);
+  const todayCN = toChineseDate(new Date());
+  const startDateCN = f.created ? toChineseDate(new Date(f.created)) : todayCN;
+  const ownerName = db.ownerName || "本人";
+  const score = scoreOf(f);
+  const threshClause = thresholdClause(f.threshold);
+
+  // Collect fix items from events
+  let allFixesSet = new Set();
+  f.events.filter(e=>e.type!=="good").forEach(e=>{
+    if(e.fixes) e.fixes.forEach(fx => allFixesSet.add(fx));
+  });
+  const fixItems = Array.from(allFixesSet);
+
+  let html = `
+    <article style="background:#FDFDFB;border:1px solid #181A16;margin:16px 16px 0">
+      <div style="text-align:center;padding:26px 26px 16px;border-bottom:3px double #181A16;position:relative">
+        <div style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:700;letter-spacing:.3em">小氣簿書面警告</div>
+        <div style="position:absolute;top:26px;right:18px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7C8177">（第 ${cNo} 號）</div>
+      </div>
+      <div style="padding:22px 22px 26px;font-size:12.5px;line-height:1.65">
+        <p style="margin:0 0 12px">${escapeHtml(f.name)}，</p>
+        <p style="margin:0 0 14px">本人現正式向你發出書面警告。</p>
+        <p style="margin:0 0 14px">根據《小氣簿》自 ${startDateCN} 起之紀錄，你共涉及 ${f.events.length} 宗事由，累計 ${score} 分${threshClause}</p>
+        <p style="margin:0 0 14px">本人在此鄭重警告，如你日後再次出現相同或類似情況，或作出任何影響本關係之行為，本人將保留採取進一步紀律處分之權利，包括但不限於<strong>即時絕交</strong>。</p>
+        <p style="margin:0 0 14px">本人期望你能珍惜我們之間的關係，深刻反省並積極改善有關行為，以避免日後再有同類事件發生。</p>
+        
+        <div style="font-family:'Noto Serif TC',serif;font-weight:700;font-size:13px;margin:18px 0 8px;border-bottom:1px solid #D8DAD2;padding-bottom:4px">一、扣分明細</div>
+        <div style="border:1px solid #D8DAD2;border-radius:2px;overflow:hidden">`;
+
+  f.events.forEach(r => {
+    const isGood = r.type === "good";
+    const catObj = isGood ? GOOD_CATS[r.cat] : CATS[r.cat];
+    const catDesc = catObj ? catObj.label : r.cat;
+    const deltaText = (isGood ? "-" : "+") + r.severity + "分";
+    html += `
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:7px 12px;border-bottom:1px solid #D8DAD2;font-size:11px;align-items:baseline">
+            <span><span style="font-family:'IBM Plex Mono',monospace;color:#7C8177">${r.date}</span> ${escapeHtml(catDesc)}</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:${isGood?'#2E4A43':'#A32D22'};white-space:nowrap">${deltaText}</span>
+          </div>`;
+  });
+
+  html += `
+          <div style="display:flex;justify-content:space-between;padding:8px 12px;font-weight:700;font-size:12px">
+            <span>累計扣咗</span><span style="font-family:'IBM Plex Mono',monospace">${score}分</span>
+          </div>
+        </div>
+
+        <div style="font-family:'Noto Serif TC',serif;font-weight:700;font-size:13px;margin:20px 0 8px;border-bottom:1px solid #D8DAD2;padding-bottom:4px">二、補救方案</div>`;
+
+  if(fixItems.length > 0){
+    html += `<ol style="margin:0;padding-left:20px">`;
+    fixItems.forEach(fx => {
+      html += `<li style="padding:5px 0;border-bottom:1px solid #D8DAD2;font-size:12px">${escapeHtml(fx)}</li>`;
+    });
+    html += `</ol>`;
+  } else {
+    html += `<p style="color:#7C8177;font-size:12px;margin:0">（無）</p>`;
+  }
+
+  html += `
+        <p style="margin:18px 0 0">隨函附上扣分明細及補救方案，請你細閱相關內容，並於指定期限內簽妥回條後交回本人，以確認已閱悉本警告通知及相關安排。</p>
+        <p style="margin:10px 0 0">倘你對上述警告內容有任何不服，可於收到本通知之日起七日內聯絡本人，並填妥《上訴申請表》，正式向本人提出上訴。</p>
+        <p style="margin:10px 0 0;font-weight:600">望你日後好自為之。</p>
+        
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:26px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7C8177">${todayCN}</div>
+          <div style="text-align:right">
+            <div style="font-size:12px;margin-bottom:6px">${escapeHtml(ownerName)} 謹啟</div>
+            <div><img src="${generateSealSvg(ownerName)}" style="width:78px;height:78px;transform:rotate(-6deg);opacity:.88;display:block"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 0;margin:0 22px">
+        <div style="flex:1;border-top:2px dashed #B7BBAE"></div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#7C8177;letter-spacing:.16em;white-space:nowrap">✂ 請沿虛線剪下 ✂</span>
+        <div style="flex:1;border-top:2px dashed #B7BBAE"></div>
+      </div>
+
+      <div style="padding:20px 22px 28px;font-size:12px;line-height:1.65">
+        <div style="text-align:center;margin-bottom:14px">
+          <div style="font-family:'Noto Serif TC',serif;font-size:15px;font-weight:700;letter-spacing:.3em;border-bottom:1px solid #181A16;display:inline-block;padding-bottom:3px">回　條</div>
+        </div>
+        <p style="margin:0 0 12px">本人已閱畢有關 ${todayCN} 發出之《小氣簿警告信（第 ${cNo} 號）》。</p>
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><input type="checkbox" style="width:16px;height:16px"/><span>已知悉上述事項</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px"><input type="checkbox" style="width:16px;height:16px;margin-top:3px"/><span>拒絕承認，解釋如下：________________________________</span></div>
+        <p style="margin:0 0 8px;font-weight:700">本人承諾嘗試以下補救方案：</p>`;
+
+  if(fixItems.length > 0){
+    fixItems.forEach(fx => {
+      html += `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><input type="checkbox" style="width:16px;height:16px"/><span>${escapeHtml(fx)}</span></div>`;
+    });
+  } else {
+    html += `<p style="color:#7C8177;font-size:11px;margin:0">（無指定方案）</p>`;
+  }
+
+  html += `
+        <div style="display:flex;justify-content:flex-end;margin-top:20px">
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:10px 12px;min-width:220px">
+            <div>姓名：</div><div style="border-bottom:1px solid #181A16"></div>
+            <div>簽署：</div><div style="border-bottom:1px solid #181A16"></div>
+            <div>日期：</div><div style="border-bottom:1px solid #181A16"></div>
+          </div>
+        </div>
+      </div>
+    </article>`;
+
+  document.getElementById("noticeArticleContainer").innerHTML = html;
+  document.getElementById("noticeOverlay").style.display = "block";
+}
+
+document.getElementById("noticeBackBtn").onclick = () => {
+  document.getElementById("noticeOverlay").style.display = "none";
+};
+
+// --- Verbal Warning ---
+function openVerbal(fileId){
+  const f = db.files.find(x=>x.id===fileId);
+  if(!f) return;
+  const todayCN = toChineseDate(new Date());
+  const startDateCN = f.created ? toChineseDate(new Date(f.created)) : todayCN;
+  const ownerName = db.ownerName || "本人";
+  const badCount = f.events.filter(e=>e.type!=="good").length;
+  const score = scoreOf(f);
+
+  const html = `
+    <article style="background:#FDFDFB;border:1px solid #181A16;margin:16px">
+      <div style="text-align:center;padding:26px 26px 16px;border-bottom:3px double #181A16">
+        <div style="font-family:'Noto Serif TC',serif;font-size:18px;font-weight:700;letter-spacing:.3em">口 頭 警 告</div>
+      </div>
+      <div style="padding:22px 22px 30px;font-size:13px;line-height:1.75">
+        <p style="margin:0 0 14px">${escapeHtml(f.name)}：</p>
+        <p style="margin:0 0 14px">你的行為現正接受《小氣簿》監察。</p>
+        <p style="margin:0 0 14px">你自 ${startDateCN} 起的行為已被記錄，並有機會觸犯《小氣簿》守則及影響雙方關係和諧. 本人現就有關事件向你作出口頭警告。</p>
+        <p style="margin:0 0 14px">是次口頭警告將正式記錄在案。根據《小氣簿》紀錄，你有 ${badCount} 次事件，現累計被扣 ${score} 分。根據《小氣簿》規定，累計分數達 ${f.threshold} 分或以上者，將即時發出書面警告。</p>
+        <p style="margin:0 0 14px">本人在此鄭重提醒你，如你日後再次出現相同或類似行為，或作出任何影響關係之行為，本人將保留採取進一步處分之權利。</p>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7C8177">${todayCN}</div>
+          <div style="text-align:right">
+            <div style="font-size:12px;margin-bottom:6px">${escapeHtml(ownerName)} 謹啟</div>
+            <div><img src="${generateSealSvg(ownerName)}" style="width:78px;height:78px;transform:rotate(-6deg);opacity:.88;display:block"></div>
+          </div>
+        </div>
+      </div>
+    </article>`;
+
+  document.getElementById("noticeArticleContainer").innerHTML = html;
+  document.getElementById("noticeOverlay").style.display = "block";
+}
+
+// --- Profile Setup ---
+document.getElementById("btnEditProfile").onclick = () => {
+  document.getElementById("setupNameInput").value = db.ownerName || "";
+  if(db.ownerGender) document.getElementById("setupGenderSelect").value = db.ownerGender;
+  document.getElementById("setupCancelBtn").style.display = "block";
+  document.getElementById("setupOverlay").style.display = "flex";
+};
+
+document.getElementById("setupCancelBtn").onclick = () => {
+  document.getElementById("setupOverlay").style.display = "none";
+};
+
+document.getElementById("setupSaveBtn").onclick = () => {
+  const name = document.getElementById("setupNameInput").value.trim();
+  const gender = document.getElementById("setupGenderSelect").value;
+  if(!name){ alert("請輸入你嘅名字。"); return; }
+  db.ownerName = name;
+  db.ownerGender = gender || "f";
+  document.getElementById("setupOverlay").style.display = "none";
+  save();
+};
+
+// --- Import / Export / Demo / Wipe ---
+document.getElementById("btnExport").onclick = () => {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+  const dlAnchor = document.createElement('a');
+  dlAnchor.setAttribute("href", dataStr);
+  dlAnchor.setAttribute("download", `siuheybook_backup_${todayISO()}.json`);
+  document.body.appendChild(dlAnchor);
+  dlAnchor.click();
+  dlAnchor.remove();
+};
+
+const fileInput = document.getElementById("fileInput");
+document.getElementById("btnImport").onclick = () => { fileInput.click(); };
+fileInput.onchange = e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = event => {
+    try {
+      const parsed = JSON.parse(event.target.result);
+      if(parsed && Array.isArray(parsed.files)){
+        db = parsed;
+        save();
+        alert("匯入成功！");
+      } else {
+        alert("檔案格式不正確。");
+      }
+    } catch(err){ alert("解析 JSON 失敗。"); }
+  };
+  reader.readAsText(file);
+};
+
+document.getElementById("btnLoadDemo").onclick = () => {
+  if(confirm("載入 Demo 將會覆蓋現有數據，確定？")){
+    db = {
+      ownerName: "大小姐",
+      ownerGender: "f",
+      files: [
+        {
+          id: uid(), seq: 1, name: "周樂狗", gender: "m", relLevel: "bf", threshold: 10, cutoff: "yes", priority: "vip",
+          created: Date.now() - 86400000*5, email: "zhou@example.com",
+          events: [
+            { id: uid(), type: "bad", cat: "late", desc: "約好七點，八點半先到，完全冇講", date: "2026-08-20", severity: 6, fixes: ["改動行程提早四個鐘通知"] },
+            { id: uid(), type: "bad", cat: "noreply", desc: "WhatsApp已讀不回兩日", date: "2026-08-22", severity: 5, fixes: ["覆唔到就一句『而家忙』"] }
+          ]
+        }
+      ]
+    };
+    save();
+  }
+};
+
+document.getElementById("btnWipe").onclick = () => {
+  if(confirm("清空全部資料？此操作無法還原！")){
+    db = { files: [] };
+    save();
+  }
+};
+
+// Initialize
+window.onload = initData;
+</script>
+</body>
+</html>
